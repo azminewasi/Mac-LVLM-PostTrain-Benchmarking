@@ -1,0 +1,22 @@
+# logs and temp
+*.log
+tmp/
+tmp/*
+*.tmp
+.DS_Store
+
+# environment, secrets, caches
+.venv/
+.wandb_key
+.env
+__pycache__/
+*.pyc
+
+# local W&B cache and smoke-test output
+wandb/
+runs_smoke/
+
+# large full-fine-tune weights (LoRA adapters are small and kept)
+runs/**/weights_*.safetensors
+
+# KEEP: data/ (training sets), runs/ (metrics, rollouts, evals, adapters, configs), results/ (comparison + analysis)
