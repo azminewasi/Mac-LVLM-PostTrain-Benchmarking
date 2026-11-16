@@ -20,3 +20,4 @@ runs_smoke/
 runs/**/weights_*.safetensors
 
 # KEEP: data/ (training sets), runs/ (metrics, rollouts, evals, adapters, configs), results/ (comparison + analysis)
+logs/

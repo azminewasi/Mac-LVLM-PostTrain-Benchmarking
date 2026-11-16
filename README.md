@@ -13,7 +13,7 @@ It is the companion of *Mac LLM/VLM Inference Testing* (same models, prompt and 
 Everything is logged to W&B with **one run per (model, method, adapter) pair**,
 named `<model>__<method>__<lora|full>` (e.g. `2B__gspo__lora`), so each pair is one line in every chart.
 
-**Status: code written and unit-tested on a stub model (CPU); not yet run on real weights.** Run `./smoke_test.sh` first. It is queued behind the inference benchmark, which must finish first so measurements are not disturbed.
+**Status: code written and unit-tested on a stub model (CPU); not yet run on real weights.** Run `scripts/smoke_test.sh` first. It is queued behind the inference benchmark, which must finish first so measurements are not disturbed.
 
 ## Setup
 Task: GSM8K. Train = 500 random train samples (seed 0, saved to `data/train_gsm8k_n500_seed0.jsonl`), 5 epochs.
@@ -25,7 +25,7 @@ greedy), measured before training (epoch 0) and after every epoch -> directly co
 | SFT + LoRA / full | LoRA: 0.8B, 2B, 4B; full: 0.8B | completion-only CE on cleaned GSM8K solutions ending `The answer is: N` |
 | GRPO / RLOO / GSPO + LoRA / full | LoRA: 0.8B, 2B, 4B; full: 0.8B | 4 prompts x G=4 samples/step, temp 1.0, max 400 new tokens |
 
-16 runs total (`run_queue.sh`). Reward = 1.0 if the final answer is correct + 0.1 format bonus; truncated = 0.
+16 runs total (`scripts/run_queue.sh`). Reward = 1.0 if the final answer is correct + 0.1 format bonus; truncated = 0.
 - **GRPO**: group-normalised advantage, token-level ratio + PPO clip, per-sequence token mean.
 - **RLOO**: leave-one-out baseline (`r_i - mean of other samples`), plain REINFORCE.
 - **GSPO**: group-normalised advantage, *sequence-level* ratio, tight clip (3e-4 / 4e-4).
@@ -50,8 +50,8 @@ greedy), measured before training (epoch 0) and after every epoch -> directly co
 
 ## Run
 ```
-./smoke_test.sh                       # ~tiny end-to-end check of every path (offline W&B); run first, after inference benchmark finishes
-./run_queue.sh --wait-for-inference   # starts all 16 runs once ../inference-testing/run_8x.log shows ALL8X_DONE
+scripts/smoke_test.sh                       # ~tiny end-to-end check of every path (offline W&B); run first, after inference benchmark finishes
+scripts/run_queue.sh --wait-for-inference   # starts all 16 runs once the inference benchmark has finished (../inference-testing/results/9B-4bit-think8x_summary.csv exists)
 python train.py --model 2B --method gspo --adapter lora     # single run
 python report.py                      # cross-run table + curves -> results/ and W&B run "00_comparison" (also runs at end of the queue)
 ```

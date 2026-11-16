@@ -1,12 +1,12 @@
 #!/bin/zsh
 # Runs all 16 (model, method, adapter) setups sequentially, small -> large. Skips finished ones (runs/<name>/DONE).
 #   ./run_queue.sh                      start now
-#   ./run_queue.sh --wait-for-inference wait until ../inference-testing finishes (ALL8X_DONE), then start
-cd "$(dirname "$0")"
+#   ./run_queue.sh --wait-for-inference wait until the inference benchmark is fully finished (9B 8x summary exists), then start
+cd "$(dirname "$0")/.." || exit 1
 source ../inference-testing/.venv/bin/activate
 export WANDB_API_KEY="$(cat ../inference-testing/.wandb_key)"
 if [[ "$1" == "--wait-for-inference" ]]; then
-  while ! grep -q ALL8X_DONE ../inference-testing/run_8x.log 2>/dev/null; do sleep 120; done
+  while [[ ! -f ../inference-testing/results/9B-4bit-think8x_summary.csv ]]; do sleep 120; done
 fi
 RUNS=(
   "0.8B sft lora" "0.8B grpo lora" "0.8B rloo lora" "0.8B gspo lora"
