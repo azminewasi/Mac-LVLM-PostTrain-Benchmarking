@@ -7,7 +7,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 ## Standing questions
 | # | Question | Status |
 |---|---|---|
-| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | open (only SFT-LoRA and GRPO-LoRA have run) |
+| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | partial: SFT-LoRA 0.22, GRPO-LoRA 0.64 (baseline 0.54); RLOO, GSPO and full fine-tuning pending |
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
@@ -67,6 +67,13 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - Greedy test accuracy 0.54 → 0.56 (epoch 1) → 0.56 (epoch 2); truncation 14% → 8% → 27%. Training correct-rate 0.42 → 0.67 over steps 0-300.
 - **Side effect noticed:** the "The answer is:" format share fell in sampled rollouts from ~0.8 to ~0.13, and in greedy test answers from 86% to 56% (epoch 2); LaTeX use 80% → 36%. Accuracy unaffected because the scorer reads the last number. **Why:** we stopped rewarding the format. (Hypothesis, consistent with timing; not tested by re-adding the bonus.)
 - Added a qualitative section (format, length, markdown, LaTeX, before/after examples) to the report.
+
+### 2026-11-17 14:20 · GRPO-LoRA (0.8B) finished: +10 points
+- Greedy test accuracy 0.54 (baseline) → 0.56 → 0.56 → 0.63 → 0.63 → **0.64**; truncation 14% → 8% → 27% → 20% → 15% → 13%. Wall-clock ~3.8 h (about 22 s/step; ~69% generation, ~31% training; ~10% of steps had no signal and skipped the update).
+- **Caveat:** +10 points on 100 test questions is at the edge of the ±10 noise band; one seed. The trend was monotone from epoch 2 on, which is encouraging but not proof.
+- **Contrast with SFT:** same model, same data, SFT lowered accuracy (0.22 final) while GRPO raised it. Consistent with the hypothesis that training on the model's own answers preserves its reasoning style (untested directly).
+- **Side effect:** "The answer is:" format share fell in training rollouts (~0.8 → ~0.13) because it is not rewarded.
+- Next in the queue: RLOO-LoRA, GSPO-LoRA, then the full fine-tuning variants.
 
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
