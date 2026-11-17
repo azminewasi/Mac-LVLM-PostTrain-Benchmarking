@@ -1,0 +1,37 @@
+[
+ {
+  "label": "SFT-like step, micro-batch 2",
+  "batch": 2,
+  "seq_len": 400,
+  "grad_checkpointing": false,
+  "peak_gb": 8.82
+ },
+ {
+  "label": "RL-like step, micro-batch 2",
+  "batch": 2,
+  "seq_len": 800,
+  "grad_checkpointing": false,
+  "peak_gb": 15.79
+ },
+ {
+  "label": "RL-like step, micro-batch 1",
+  "batch": 1,
+  "seq_len": 800,
+  "grad_checkpointing": false,
+  "peak_gb": 8.83
+ },
+ {
+  "label": "RL-like step, micro-batch 2",
+  "batch": 2,
+  "seq_len": 800,
+  "grad_checkpointing": true,
+  "peak_gb": 6.89
+ },
+ {
+  "label": "RL-like step, micro-batch 4",
+  "batch": 4,
+  "seq_len": 800,
+  "grad_checkpointing": true,
+  "peak_gb": 12.24
+ }
+]

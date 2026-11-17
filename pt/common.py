@@ -5,7 +5,7 @@ import mlx.core as mx
 
 MODELS = {"0.8B": "Qwen/Qwen3.5-0.8B", "2B": "Qwen/Qwen3.5-2B", "4B": "Qwen/Qwen3.5-4B"}
 # per-model memory defaults for a 16 GB machine (micro-batch = sequences per forward/backward pass)
-MODEL_DEFAULTS = {"0.8B": dict(micro_bs=2, grad_ckpt=False), "2B": dict(micro_bs=2, grad_ckpt=True),
+MODEL_DEFAULTS = {"0.8B": dict(micro_bs=2, grad_ckpt=True), "2B": dict(micro_bs=2, grad_ckpt=True),
                   "4B": dict(micro_bs=1, grad_ckpt=True)}
 # Same prompt/scoring as inference-testing/bench.py so numbers are directly comparable.
 SUFFIX = "\nSolve step by step. End with a final line: 'The answer is: <number>'."
