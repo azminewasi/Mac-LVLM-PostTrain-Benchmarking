@@ -55,7 +55,7 @@ if not LORA and args.model != "0.8B": raise SystemExit("full fine-tuning is only
 D = MODEL_DEFAULTS[args.model]
 args.micro_bs = args.micro_bs or D["micro_bs"]; args.grad_ckpt = args.grad_ckpt or D["grad_ckpt"]
 if args.lr is None:
-    args.lr = (1e-4 if LORA else 1e-5) if args.method == "sft" else (2e-5 if LORA else 2e-6)
+    args.lr = (2e-5 if LORA else 1e-5) if args.method == "sft" else (5e-6 if LORA else 2e-6)
 args.batch = args.batch or (4 if not RL else 4)
 tight = {"gspo": (3e-4, 4e-4)}.get(args.method, (0.2, 0.2))
 args.eps_lo = args.eps_lo or tight[0]; args.eps_hi = args.eps_hi or tight[1]

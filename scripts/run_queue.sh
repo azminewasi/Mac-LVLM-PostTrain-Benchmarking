@@ -8,6 +8,7 @@ export WANDB_API_KEY="$(cat ../inference-testing/.wandb_key)"
 if [[ "$1" == "--wait-for-inference" ]]; then
   while [[ ! -f ../inference-testing/results/9B-4bit-think8x_summary.csv ]]; do sleep 120; done
 fi
+EXTRA=(${=EXTRA})
 RUNS=(
   "0.8B sft lora" "0.8B grpo lora" "0.8B rloo lora" "0.8B gspo lora"
   "0.8B sft full" "0.8B grpo full" "0.8B rloo full" "0.8B gspo full"
@@ -17,7 +18,7 @@ RUNS=(
 for r in $RUNS; do
   set -- ${=r}
   echo "=== $(date '+%F %T') $1 $2 $3"
-  python train.py --model $1 --method $2 --adapter $3 "${EXTRA[@]}" || echo "FAILED: $r"
+  python train.py --model $1 --method $2 --adapter $3 ${EXTRA[@]} || echo "FAILED: $r"
 done
 echo QUEUE_DONE
 python report.py
