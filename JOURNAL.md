@@ -97,6 +97,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Decision (user):** stop after GSPO-LoRA because the laptop had been running for ~20 hours. The queue was cancelled; nothing is running. **Not run:** the four 0.8B full fine-tuning setups on GSM8K, all eight math-story-problems runs (the code and queue for them are ready and smoke-tested), and the 2B/4B runs.
 - **To resume:** `caffeinate -ims zsh scripts/run_queue.sh > logs/queue.log 2>&1 &` skips every finished run (it prints "already done, skipping") and continues with the full fine-tuning runs, then the math-story set. Expect the full runs to be memory-tight (about 11 GB of weights + optimizer state for the 0.8B against ≈9.5 GB usable; swap was already 3.3 GB during LoRA runs), so watch the first one and stop it if steps slow badly.
 
+### 2026-11-17 22:36 · Resumed after a restart: full fine-tuning (0.8B, GSM8K)
+- The laptop had been shut down; on restart swap was 0 and memory 78% free. The post-train repo now has a GitHub remote (`azminewasi/post-train-testing`, in sync); the inference repo was also pushed by the user.
+- `scripts/run_queue.sh` resumed (finished runs skipped): SFT-full first.
+- **Measured (first 17 steps of SFT-full):** peak MLX memory **11.1 GB**, system RAM up to 13.8 GB, swap 3.4-3.5 GB of 4 GB (nearly exhausted), ~2.4 s/step. Trainable parameters 498M of 752M (all transformer blocks; embeddings frozen), lr 1e-5, gradient checkpointing on. This matches the earlier estimate (fp32 master weights + two Adam moments + bf16 weights ≈ 14 bytes/param).
+- **Risk (hypothesis):** the RL full runs add rollout generation and activations on top of ~11 GB, so they may not fit in the ≈9.5 GB usable (16 GB minus ≈6.5 GB for macOS), i.e. swap exhaustion or thrash. **Mitigation tried:** `--micro-bs 1` for all RL full runs (queue script updated, swapped in without interrupting the SFT-full process). If GRPO-full thrashes or fails, "does not fit on 16 GB" is itself the result; record the measured peak and swap.
+
 ## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch | Hours | Peak MLX GB |
 |---|---|---|---|---|

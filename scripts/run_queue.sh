@@ -16,9 +16,11 @@ run_phase() {   # $1 = label, rest = extra train.py args
   local label=$1; shift
   local extras=("$@")
   for r in $SETUPS; do
-    local m=${r%% *} a=${r##* }
-    echo "=== $(date '+%F %T') [$label] 0.8B $m $a"
-    python train.py --model 0.8B --method $m --adapter $a $extras || echo "FAILED: [$label] $r"
+    local m=${r%% *} a=${r##* } safe=()
+    # full fine-tuning RL: weights + fp32 master + Adam state already take ~11 GB of the ~9.5 GB usable, so use the smallest micro-batch
+    [[ $a == full && $m != sft ]] && safe=(--micro-bs 1)
+    echo "=== $(date '+%F %T') [$label] 0.8B $m $a $safe"
+    python train.py --model 0.8B --method $m --adapter $a $safe $extras || echo "FAILED: [$label] $r"
   done
 }
 run_phase gsm8k
