@@ -174,3 +174,29 @@ def evaluate(model, tokenizer, eval_rows, max_tokens=512, batch_size=25):
             g = [x for x in recs if x["form"] == f_]
             m[f"eval/acc_{f_[:-3]}"] = sum(x["correct"] for x in g) / len(g); m[f"eval/tokens_{f_[:-3]}"] = float(np.mean([x["gen_tokens"] for x in g]))
     return m, recs
+
+
+# ------------------------------------------------------------------ self-distillation SFT data
+def build_self_data(model, tokenizer, train_rows, path, k=4, per_q=2, max_new=640, temp=1.0, gen_batch=16):
+    """Rejection-sampling fine-tuning data: sample k answers per training question from the *current (untrained) model*,
+    keep finished + correct ones (up to per_q distinct per question) as the SFT targets. Keeps the model's own style, so SFT
+    on it should not pull the model away from how it already reasons. Cached at `path` (kept with the run data)."""
+    if os.path.exists(path):
+        return [json.loads(l) for l in open(path)]
+    prompts = [encode(tokenizer, build_prompt_text(tokenizer, r["question"])) for r in train_rows for _ in range(k)]
+    texts, toks, trunc, stats = generate_batch(model, tokenizer, prompts, max_new, temp, batch_size=gen_batch)
+    rows, n_with = [], 0
+    for qi, r in enumerate(train_rows):
+        got = []
+        for j in range(k):
+            i = qi * k + j
+            if not trunc[i] and is_correct(texts[i], r["gold"]) and texts[i] not in [g["target"] for g in got]:
+                got.append({**{kk: r[kk] for kk in ("source_index", "question", "gold", "form") if kk in r}, "id": len(rows) + len(got), "src_id": r["id"], "k": j, "target": texts[i]})
+            if len(got) >= per_q: break
+        n_with += bool(got); rows += got
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w") as f:
+        for r in rows: f.write(json.dumps(r) + "\n")
+    print(f"self-distillation data: {len(rows)} examples from {n_with}/{len(train_rows)} questions "
+          f"(sampled {len(prompts)} answers at T={temp}, {100*np.mean([not t for t in trunc]):.0f}% finished) -> {path}", flush=True)
+    return rows

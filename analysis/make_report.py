@@ -5,9 +5,9 @@ import json, os, glob, html, datetime
 import numpy as np
 
 RUNS = "runs"; OUT = "results"
-METHODS = ["sft", "grpo", "rloo", "gspo"]
-MCOL = {"sft": "s4", "grpo": "s0", "rloo": "s1", "gspo": "s2"}
-NAMES = {"sft": "SFT", "grpo": "GRPO", "rloo": "RLOO", "gspo": "GSPO"}
+METHODS = ["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"]
+MCOL = {"sft": "s4", "sftgentle": "s5", "sftself": "s6", "grpo": "s0", "rloo": "s1", "gspo": "s2"}
+NAMES = {"sft": "SFT", "sftgentle": "SFT gentle", "sftself": "SFT self-distilled", "grpo": "GRPO", "rloo": "RLOO", "gspo": "GSPO"}
 WEIGHT_GB = {"0.8B": 1.59, "2B": 4.12, "4B": 8.46}      # bf16 weights as loaded by MLX (measured in the inference project)
 PARAMS_B = {"0.8B": 0.76, "2B": 2.0, "4B": 4.2}
 esc = lambda s: html.escape(str(s))
@@ -81,9 +81,9 @@ def tbl(head, rows, cls=""):
 def fig(cap, body): return f'<div class="fig"><div class="cap">{cap}</div>{body}</div>'
 
 CSS = """
-:root{--bg:#fbfbfa;--fg:#1d2024;--dim:#6b7078;--card:#fff;--line:#e3e4e0;--grid:#ececE8;--s0:#2f6fdc;--s1:#e07b00;--s2:#139b6c;--s3:#a23cc4;--s4:#7a7f87;--accent:#2f6fdc}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14161a;--fg:#e8e9ec;--dim:#9aa0a8;--card:#1b1e23;--line:#2c3037;--grid:#262a31;--s0:#6aa3ff;--s1:#ffa53d;--s2:#4cd6a0;--s3:#d98cf0;--s4:#9aa0a8;--accent:#6aa3ff}}
-:root[data-theme=dark]{--bg:#14161a;--fg:#e8e9ec;--dim:#9aa0a8;--card:#1b1e23;--line:#2c3037;--grid:#262a31;--s0:#6aa3ff;--s1:#ffa53d;--s2:#4cd6a0;--s3:#d98cf0;--s4:#9aa0a8;--accent:#6aa3ff}
+:root{--bg:#fbfbfa;--fg:#1d2024;--dim:#6b7078;--card:#fff;--line:#e3e4e0;--grid:#ececE8;--s0:#2f6fdc;--s1:#e07b00;--s2:#139b6c;--s3:#a23cc4;--s4:#7a7f87;--s5:#c2185b;--s6:#8d6e63;--accent:#2f6fdc}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14161a;--fg:#e8e9ec;--dim:#9aa0a8;--card:#1b1e23;--line:#2c3037;--grid:#262a31;--s0:#6aa3ff;--s1:#ffa53d;--s2:#4cd6a0;--s3:#d98cf0;--s4:#9aa0a8;--s5:#ff7aa8;--s6:#c9a893;--accent:#6aa3ff}}
+:root[data-theme=dark]{--bg:#14161a;--fg:#e8e9ec;--dim:#9aa0a8;--card:#1b1e23;--line:#2c3037;--grid:#262a31;--s0:#6aa3ff;--s1:#ffa53d;--s2:#4cd6a0;--s3:#d98cf0;--s4:#9aa0a8;--s5:#ff7aa8;--s6:#c9a893;--accent:#6aa3ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
 main{max-width:980px;margin:0 auto;padding:32px 16px 80px}h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}h2{font-size:21px;margin:44px 0 8px;border-top:1px solid var(--line);padding-top:26px}h3{font-size:16px;margin:26px 0 6px}
 p{margin:8px 0}.sub{color:var(--dim);margin:0 0 18px}.dim{color:var(--dim)}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:18px 0}
@@ -91,7 +91,7 @@ p{margin:8px 0}.sub{color:var(--dim);margin:0 0 18px}.dim{color:var(--dim)}.card
 .fig{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 12px 6px;margin:12px 0}.fig .cap{color:var(--dim);font-size:13px;margin:2px 4px 6px}.note{border-left:3px solid var(--accent);background:var(--card);padding:8px 12px;margin:12px 0;border-radius:0 8px 8px 0;font-size:14px}
 .chart{width:100%;height:auto;display:block}.grid{stroke:var(--grid);stroke-width:1}.axis{stroke:var(--dim);stroke-width:1}.ref{stroke:var(--dim);stroke-width:1;stroke-dasharray:4 3}
 .tick,.glab{fill:var(--dim);font-size:11px}.glab{font-size:11.5px;fill:var(--fg)}.val{fill:var(--fg);font-size:10px}.reflab{paint-order:stroke;stroke:var(--card);stroke-width:3px}
-.s0{fill:var(--s0)}.s1{fill:var(--s1)}.s2{fill:var(--s2)}.s3{fill:var(--s3)}.s4{fill:var(--s4)}path.ln{fill:none;stroke-width:2.2}path.ln.s0{stroke:var(--s0)}path.ln.s1{stroke:var(--s1)}path.ln.s2{stroke:var(--s2)}path.ln.s3{stroke:var(--s3)}path.ln.s4{stroke:var(--s4)}
+.s0{fill:var(--s0)}.s1{fill:var(--s1)}.s2{fill:var(--s2)}.s3{fill:var(--s3)}.s4{fill:var(--s4)}.s5{fill:var(--s5)}.s6{fill:var(--s6)}path.ln.s5{stroke:var(--s5)}path.ln.s6{stroke:var(--s6)}i.s5{background:var(--s5)}i.s6{background:var(--s6)}path.ln{fill:none;stroke-width:2.2}path.ln.s0{stroke:var(--s0)}path.ln.s1{stroke:var(--s1)}path.ln.s2{stroke:var(--s2)}path.ln.s3{stroke:var(--s3)}path.ln.s4{stroke:var(--s4)}
 .legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;margin:0 4px 6px}.legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}.sw.dash{outline:1px dashed var(--fg);outline-offset:1px}
 i.s0{background:var(--s0)}i.s1{background:var(--s1)}i.s2{background:var(--s2)}i.s3{background:var(--s3)}i.s4{background:var(--s4)}
 .tw{overflow-x:auto;margin:10px 0}table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card);border:1px solid var(--line)}th,td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--dim);font-weight:600;font-size:12px}table:not(.dense) td{white-space:normal}

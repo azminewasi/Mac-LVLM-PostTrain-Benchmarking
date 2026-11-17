@@ -11,6 +11,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
+| Q7 | Does SFT stop hurting with (a) a gentle recipe on human solutions, or (b) self-distillation on the model's own correct answers? | open: `sftgentle` / `sftself` queued after the RL-full check |
 | Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: code ready and smoke-tested, runs not started |
 
 ## Log
@@ -102,6 +103,13 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - `scripts/run_queue.sh` resumed (finished runs skipped): SFT-full first.
 - **Measured (first 17 steps of SFT-full):** peak MLX memory **11.1 GB**, system RAM up to 13.8 GB, swap 3.4-3.5 GB of 4 GB (nearly exhausted), ~2.4 s/step. Trainable parameters 498M of 752M (all transformer blocks; embeddings frozen), lr 1e-5, gradient checkpointing on. This matches the earlier estimate (fp32 master weights + two Adam moments + bf16 weights ≈ 14 bytes/param).
 - **Risk (hypothesis):** the RL full runs add rollout generation and activations on top of ~11 GB, so they may not fit in the ≈9.5 GB usable (16 GB minus ≈6.5 GB for macOS), i.e. swap exhaustion or thrash. **Mitigation tried:** `--micro-bs 1` for all RL full runs (queue script updated, swapped in without interrupting the SFT-full process). If GRPO-full thrashes or fails, "does not fit on 16 GB" is itself the result; record the measured peak and swap.
+
+### 2026-11-17 ~22:45 · Full fine-tuning thrashes; SFT fixes built; new queue order
+- **SFT-full (0.8B) was already thrashing.** First ~25 steps ran at ~2.4 s/step (peak MLX 11.1 GB), then step time jumped to 15-27 s, GPU utilisation fell from ~90% to 33-45% and the swap file grew from 4 to 5 GB. Cause (consistent with the numbers): weights + fp32 master copy + Adam state ≈ 11 GB plus ≈6.5 GB for macOS exceeds 16 GB. **Decision:** stopped it at ~step 45/625 (it would have taken 3-4 h and blocked everything else); run kept in `runs_discarded/0.8B__sft__full__infeasible-thrash` and tagged `discarded, infeasible-thrash` in W&B.
+- **User instruction:** check the RL with full fine-tuning; if it fails, move to the 0.8B LoRA math-story runs. Implemented as a watchdog (`scripts/watchdog_check.py`): GRPO-full runs with micro-batch 1; if the median of the last 6 step times > 60 s (> ~10 h per run), peak MLX > 15.5 GB, or the process crashes, it is stopped and `runs/INFEASIBLE_RL_FULL` is written, and the other full-RL runs are skipped. Math-story runs are LoRA only.
+- **SFT fix (user request: SFT should not drop the score).** Diagnosis so far: (a) the style mismatch from terse human solutions, (b) memorisation (loss 0.01), (c) an aggressive lr (accuracy fell to 0.17 already after the first epoch). Two new methods, both with LoRA lr 5e-6 and 2 epochs, test which matters: **`sftgentle`** = same human solutions, gentle recipe (isolates the hyperparameters); **`sftself`** = rejection-sampling fine-tuning on the model's own correct finished answers (4 samples per question at T=1.0, up to 2 distinct correct per question; isolates the data source). Smoke-tested (tiny). Whether either keeps accuracy at ~0.54 is an open question for the real runs; no guarantee.
+- **Queue order now:** GSM8K full RL (guarded) → `sftgentle`, `sftself` (GSM8K, LoRA) → math-story LoRA: sft, sftgentle, sftself, grpo, rloo, gspo.
+- **Monitoring:** a 20-minute health check (session cron) plus a log watcher; the check restarts a dead queue and fixes small failures.
 
 ## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch | Hours | Peak MLX GB |

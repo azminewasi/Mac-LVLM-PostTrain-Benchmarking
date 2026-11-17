@@ -24,15 +24,16 @@ def train_graph():
     try: yield
     finally: _TRAIN[0] = False
 
-from pt.common import (MODELS, MODEL_DEFAULTS, build_prompt_text, encode, end_token_id, load_train, load_eval,
+from pt.common import (build_self_data, MODELS, MODEL_DEFAULTS, build_prompt_text, encode, end_token_id, load_train, load_eval,
                        reward_fn, generate_batch, evaluate, Monitor)
 from pt.optim import lr_at, MasterAdamW
 from pt.losses import group_advantages, sft_loss, rl_loss, token_logprobs
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--model", required=True, choices=list(MODELS)); ap.add_argument("--method", required=True, choices=["sft", "grpo", "rloo", "gspo"])
+ap.add_argument("--model", required=True, choices=list(MODELS)); ap.add_argument("--method", required=True, choices=["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"],
+                help="sft = human/reference solutions (lr 2e-5, 5 epochs); sftgentle = same data, gentler (lr 5e-6, 2 epochs); sftself = fine-tune on the model's own correct answers (rejection sampling), gentle")
 ap.add_argument("--adapter", required=True, choices=["lora", "full"])
-ap.add_argument("--n-train", type=int, default=500); ap.add_argument("--epochs", type=int, default=5)
+ap.add_argument("--n-train", type=int, default=500); ap.add_argument("--epochs", type=int, default=None, help="default 5 (2 for sftgentle / sftself)")
 ap.add_argument("--n-eval", type=int, default=100); ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--project", default="macbook-posttrain"); ap.add_argument("--entity", default=None)
 ap.add_argument("--wandb-mode", default="online"); ap.add_argument("--out", default="runs")
@@ -51,12 +52,13 @@ ap.add_argument("--gen-batch", type=int, default=16)
 ap.add_argument("--max-steps", type=int, default=0, help="debug: stop after N steps")
 args = ap.parse_args()
 
-RL = args.method != "sft"; LORA = args.adapter == "lora"
+RL = args.method in ("grpo", "rloo", "gspo"); LORA = args.adapter == "lora"
 if not LORA and args.model != "0.8B": raise SystemExit("full fine-tuning is only configured for 0.8B on a 16 GB machine")
 D = MODEL_DEFAULTS[args.model]
 args.micro_bs = args.micro_bs or D["micro_bs"]; args.grad_ckpt = args.grad_ckpt or D["grad_ckpt"]
+if args.epochs is None: args.epochs = 2 if args.method in ("sftgentle", "sftself") else 5
 if args.lr is None:
-    args.lr = (2e-5 if LORA else 1e-5) if args.method == "sft" else (2e-6 if LORA else 1e-6)
+    args.lr = ((2e-5 if LORA else 1e-5) if args.method == "sft" else (5e-6 if LORA else 3e-6)) if not RL else (2e-6 if LORA else 1e-6)
 args.batch = args.batch or (4 if not RL else 4)
 tight = {"gspo": (3e-4, 4e-4)}.get(args.method, (0.2, 0.2))
 args.eps_lo = args.eps_lo or tight[0]; args.eps_hi = args.eps_hi or tight[1]
@@ -90,6 +92,8 @@ print(f"{run_name}: loaded {load_s:.1f}s, trainable {n_train_params/1e6:.1f}M / 
 # ---------------------------------------------------------------- data
 train = load_train(args.n_train, args.seed, dataset=args.dataset); evalset = load_eval(args.n_eval, dataset=args.dataset)
 END = end_token_id(tok)
+if args.method == "sftself":      # targets = the untrained model's own correct, finished answers (cached; kept as training data)
+    train = build_self_data(model, tok, train, f"data/self_{'gsm8k' if args.dataset == 'gsm8k' else 'mathstory'}_n{args.n_train}_seed{args.seed}_k4.jsonl", k=4, per_q=2, max_new=args.max_new, temp=1.0, gen_batch=args.gen_batch)
 def sft_example(r):
     p = encode(tok, build_prompt_text(tok, r["question"])); c = encode(tok, r["target"]) + [END]
     return p, c
@@ -251,6 +255,7 @@ art = wandb.Artifact(f"{run_name}-data", type="run-data")
 for fn in os.listdir(out):
     if fn.endswith((".jsonl", ".json")) or (LORA and fn.endswith(".safetensors")): art.add_file(f"{out}/{fn}")
 art.add_file(f"data/train_{'gsm8k' if args.dataset == 'gsm8k' else 'mathstory'}_n{args.n_train}_seed{args.seed}.jsonl")
+if args.method == "sftself": art.add_file(f"data/self_{'gsm8k' if args.dataset == 'gsm8k' else 'mathstory'}_n{args.n_train}_seed{args.seed}_k4.jsonl")
 run.log_artifact(art)
 mon.stop(); run.finish(); open(f"{out}/DONE", "w").write(time.strftime("%F %T"))
 print(f"{run_name} DONE: acc {hist[0]:.3f} -> {hist[-1]:.3f} (best {best_acc:.3f})")
