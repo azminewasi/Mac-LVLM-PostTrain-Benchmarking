@@ -29,28 +29,53 @@ def clean_solution(answer):
     final = final.strip().replace(",", "")
     return f"{body}\nThe answer is: {final}", final
 
-def load_train(n, seed, out_dir="data"):
-    """n random GSM8K *train* samples (fixed seed). Saved to disk so the exact data is kept."""
-    path = f"{out_dir}/train_gsm8k_n{n}_seed{seed}.jsonl"
+FORMS = ["eq_qs", "story_1_qs", "story_2_qs", "story_3_qs"]          # math-story-problems question forms
+TRAIN_FORMS = ["story_1_qs", "story_2_qs", "story_3_qs"]             # training items use one random story form each
+
+def make_solution(eq, gold):
+    """Short step-by-step reference solution derived deterministically from the equation 'a + b - c = ?'."""
+    toks = eq.replace("= ?", "").split()
+    acc = int(toks[0]); lines = []
+    for op, v in zip(toks[1::2], toks[2::2]):
+        nxt = acc + int(v) if op == "+" else acc - int(v)
+        lines.append(f"{acc} {op} {v} = {nxt}"); acc = nxt
+    assert str(acc) == str(gold).strip(), (eq, acc, gold)
+    return "\n".join(lines) + f"\nThe answer is: {acc}"
+
+def load_train(n, seed, out_dir="data", dataset="gsm8k"):
+    """n random *train* samples (fixed seed), saved to disk so the exact data is kept."""
+    tag = "gsm8k" if dataset == "gsm8k" else "mathstory"
+    path = f"{out_dir}/train_{tag}_n{n}_seed{seed}.jsonl"
     if os.path.exists(path):
         return [json.loads(l) for l in open(path)]
     from datasets import load_dataset
-    ds = load_dataset("openai/gsm8k", "main", split="train")
-    idx = random.Random(seed).sample(range(len(ds)), n)
     rows = []
-    for i, j in enumerate(idx):
-        target, gold = clean_solution(ds[j]["answer"])
-        rows.append(dict(id=i, source_index=j, question=ds[j]["question"], target=target, gold=gold))
+    if dataset == "gsm8k":
+        ds = load_dataset("openai/gsm8k", "main", split="train")
+        idx = random.Random(seed).sample(range(len(ds)), n)
+        for i, j in enumerate(idx):
+            target, gold = clean_solution(ds[j]["answer"])
+            rows.append(dict(id=i, source_index=j, question=ds[j]["question"], target=target, gold=gold))
+    else:
+        ds = load_dataset("azminetoushikwasi/math-story-problems", split="train")
+        rng = random.Random(seed); idx = rng.sample(range(len(ds)), n)
+        for i, j in enumerate(idx):
+            r = ds[j]; form = rng.choice(TRAIN_FORMS); gold = str(r["answer"]).strip()
+            rows.append(dict(id=i, source_index=j, form=form, question=r[form], target=make_solution(r["eq_qs"], gold), gold=gold))
     os.makedirs(out_dir, exist_ok=True)
     with open(path, "w") as f:
         for r in rows: f.write(json.dumps(r) + "\n")
     return rows
 
-def load_eval(n=100):
-    """First n GSM8K *test* samples, identical to the inference benchmark."""
+def load_eval(n=100, dataset="gsm8k"):
+    """GSM8K: first n *test* samples, identical to the inference benchmark.
+    math-story-problems: first n *test* items, each asked in all four forms (eq, story_1, story_2, story_3) -> 4n prompts."""
     from datasets import load_dataset
-    ds = load_dataset("openai/gsm8k", "main", split="test").select(range(n))
-    return [dict(id=i, question=r["question"], gold=r["answer"].split("####")[-1].strip().replace(",", "")) for i, r in enumerate(ds)]
+    if dataset == "gsm8k":
+        ds = load_dataset("openai/gsm8k", "main", split="test").select(range(n))
+        return [dict(id=i, question=r["question"], gold=r["answer"].split("####")[-1].strip().replace(",", "")) for i, r in enumerate(ds)]
+    ds = load_dataset("azminetoushikwasi/math-story-problems", split="test").select(range(n))
+    return [dict(id=i, form=f, question=r[f], gold=str(r["answer"]).strip()) for f in FORMS for i, r in enumerate(ds)]
 
 
 # ------------------------------------------------------------------ scoring
@@ -138,10 +163,14 @@ def evaluate(model, tokenizer, eval_rows, max_tokens=512, batch_size=25):
     recs, ok = [], 0
     for r, tx, tk, tr in zip(eval_rows, texts, toks, trunc):
         c = int((not tr) and is_correct(tx, r["gold"])); ok += c
-        recs.append(dict(id=r["id"], gold=r["gold"], pred=extract_answer(tx), correct=c, truncated=int(tr), gen_tokens=len(tk), response=tx))
+        recs.append(dict(id=r["id"], gold=r["gold"], pred=extract_answer(tx), correct=c, truncated=int(tr), gen_tokens=len(tk), response=tx, **({"form": r["form"]} if "form" in r else {})))
     n = len(eval_rows)
     m = {"eval/accuracy": ok / n, "eval/truncated_frac": float(np.mean([x["truncated"] for x in recs])),
          "eval/gen_tokens_mean": float(np.mean([x["gen_tokens"] for x in recs])), "eval/time_s": dt,
          "eval/gen_tokens_per_s": stats.generation_tps, "eval/prompt_tokens_per_s": stats.prompt_tps,
          "eval/peak_mem_gb": stats.peak_memory}
+    if "form" in eval_rows[0]:                       # per question-form accuracy / length (math-story-problems)
+        for f_ in FORMS:
+            g = [x for x in recs if x["form"] == f_]
+            m[f"eval/acc_{f_[:-3]}"] = sum(x["correct"] for x in g) / len(g); m[f"eval/tokens_{f_[:-3]}"] = float(np.mean([x["gen_tokens"] for x in g]))
     return m, recs

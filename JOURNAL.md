@@ -11,6 +11,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
+| Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: queued after the GSM8K 0.8B set |
 
 ## Log
 
@@ -75,12 +76,21 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Side effect:** "The answer is:" format share fell in training rollouts (~0.8 → ~0.13) because it is not rewarded.
 - Next in the queue: RLOO-LoRA, GSPO-LoRA, then the full fine-tuning variants.
 
+### 2026-11-17 ~16:20 · New experiment set: math-story-problems (0.8B only)
+- **Request:** after all 0.8B GSM8K runs finish, stop (no 2B/4B), and repeat the 0.8B experiments on the Hugging Face dataset `azminetoushikwasi/math-story-problems`, which has short answers, logging to a new W&B project (`macbook-posttrain-mathstory`).
+- **Dataset facts (measured):** 131,072 train / 1,024 validation / 3,072 test. Each row is one arithmetic problem in four forms: `eq_qs` (bare equation, e.g. `2385 + 761 - 1063 = ?`), `story_1_qs` (short story), `story_2_qs` (story with a distractor item type), `story_3_qs` (long story with many distractor sentences), plus a numeric `answer`. Always three numbers and two +/- operators; answers 25-15,784 (all positive); prompts 17 / 39 / 40 / 105 tokens for the four forms; 0 of 1,000 test equations appear in train.
+- **Design (decided with the user):** train on 500 items, each using one random story form (1/3 each); evaluate 100 test items in **all four forms** (400 prompts) and log accuracy per form (`eval/acc_eq`, `eval/acc_story_1|2|3`) plus overall; 5 epochs, same hyperparameters, same eight setups as GSM8K (4 methods x LoRA/full).
+- **No reference solutions exist** (only the final answer), so SFT targets are generated deterministically from the equation: `2385 + 761 = 3146 / 3146 - 1063 = 2083 / The answer is: 2083` (verified against the dataset answer; note it shows the arithmetic but not the story-to-equation step). This makes SFT here a different recipe from GSM8K SFT (human solutions), so cross-dataset SFT comparisons need that caveat.
+- **Code:** `--dataset mathstory` in `train.py`; separate output dir `runs_mathstory/`. A 2-run smoke test passed (SFT and GRPO, per-form metrics logged). In that tiny test the untrained model got eq 100% / story_1 75% / story_2 0% / story_3 0% (n=4 each: anecdotal only).
+- **Queue:** `scripts/run_queue.sh` now runs Phase A (rest of the GSM8K 0.8B set) then Phase B (math-story); 2B/4B moved to the optional `scripts/run_queue_larger.sh`. Config metadata fix: the stored `reward` description now says "correct only" (earlier runs' configs still carry the stale "+0.1 format" text; the reward actually used was correctness-only since the GRPO v2 fix).
+- **Expectation (hypothesis, untested):** shorter answers mean much faster RL steps (generation dominates), so Phase B should cost far less wall-clock than Phase A; the distractor forms (story_2/3) should be the hard ones.
+
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
 - Failed attempts were kept deliberately; they explain the final settings.
 - Learning rates were corrected after failures, not swept, so cross-method comparisons are not tuned head-to-heads.
 
 ## Next
-1. Finish GRPO-LoRA (0.8B), then RLOO, GSPO, then the full fine-tuning variants (queue running).
-2. Measure the 2B memory before the 4B; decide on the 4B (micro-batch 1, shorter sequences, or a leaner gated-delta backward).
-3. Update the report's conclusions when the methods can be compared.
+1. Finish the 0.8B GSM8K set (RLOO and GSPO LoRA, then the four full fine-tuning runs), then the 0.8B math-story set.
+2. 2B/4B are out of scope for now (`scripts/run_queue_larger.sh` kept for later; measure the 2B before the 4B).
+3. Write a math-story report (per-form accuracy by epoch, answer length, speed) when Phase B has results; update the GSM8K report's conclusions when the methods can be compared.

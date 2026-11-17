@@ -36,6 +36,7 @@ ap.add_argument("--n-train", type=int, default=500); ap.add_argument("--epochs",
 ap.add_argument("--n-eval", type=int, default=100); ap.add_argument("--seed", type=int, default=0)
 ap.add_argument("--project", default="macbook-posttrain"); ap.add_argument("--entity", default=None)
 ap.add_argument("--wandb-mode", default="online"); ap.add_argument("--out", default="runs")
+ap.add_argument("--dataset", default="gsm8k", choices=["gsm8k", "mathstory"], help="gsm8k, or azminetoushikwasi/math-story-problems (train on mixed story forms, evaluate on all four forms)")
 # optimisation
 ap.add_argument("--lr", type=float, default=None); ap.add_argument("--batch", type=int, default=None, help="SFT: sequences/step; RL: prompts/step")
 ap.add_argument("--micro-bs", type=int, default=None); ap.add_argument("--grad-ckpt", action="store_true"); ap.add_argument("--max-seq", type=int, default=896)
@@ -87,7 +88,7 @@ opt = optim.AdamW(learning_rate=args.lr, weight_decay=0.0) if LORA else MasterAd
 print(f"{run_name}: loaded {load_s:.1f}s, trainable {n_train_params/1e6:.1f}M / {n_total_params/1e6:.1f}M", flush=True)
 
 # ---------------------------------------------------------------- data
-train = load_train(args.n_train, args.seed); evalset = load_eval(args.n_eval)
+train = load_train(args.n_train, args.seed, dataset=args.dataset); evalset = load_eval(args.n_eval, dataset=args.dataset)
 END = end_token_id(tok)
 def sft_example(r):
     p = encode(tok, build_prompt_text(tok, r["question"])); c = encode(tok, r["target"]) + [END]
@@ -102,9 +103,9 @@ cfg = dict(vars(args)) | dict(run_name=run_name, model_name=MODELS[args.model], 
           total_params=n_total_params, trainable_pct=100 * n_train_params / n_total_params, steps_per_epoch=steps_per_epoch,
           total_steps=total_steps, load_time_s=load_s, chip="Apple M5", ram_gb=16, mlx=mx.__version__, os=platform.platform(),
           algorithm_notes="critic-free, reference-free (KL=0)" if RL else "completion-only cross-entropy",
-          reward="1.0 correct + 0.1 format ('The answer is: N')" if RL else None)
+          reward="1.0 if finished and correct, else 0 (format is logged, not rewarded)" if RL else None)
 run = wandb.init(project=args.project, entity=args.entity, name=run_name, group=args.method, job_type=args.adapter,
-                 tags=[args.model, args.method, args.adapter], config=cfg, mode=args.wandb_mode, dir=out)
+                 tags=[args.model, args.method, args.adapter, args.dataset], config=cfg, mode=args.wandb_mode, dir=out)
 json.dump(cfg, open(f"{out}/config.json", "w"), indent=1, default=str)
 mlog = open(f"{out}/metrics.jsonl", "a"); rlog = open(f"{out}/rollouts.jsonl", "a") if RL else None
 mon = Monitor(); mon.start()
@@ -249,7 +250,7 @@ wandb.log({"data/training_set": tr_tab}, step=state["step"])
 art = wandb.Artifact(f"{run_name}-data", type="run-data")
 for fn in os.listdir(out):
     if fn.endswith((".jsonl", ".json")) or (LORA and fn.endswith(".safetensors")): art.add_file(f"{out}/{fn}")
-art.add_file(f"data/train_gsm8k_n{args.n_train}_seed{args.seed}.jsonl")
+art.add_file(f"data/train_{'gsm8k' if args.dataset == 'gsm8k' else 'mathstory'}_n{args.n_train}_seed{args.seed}.jsonl")
 run.log_artifact(art)
 mon.stop(); run.finish(); open(f"{out}/DONE", "w").write(time.strftime("%F %T"))
 print(f"{run_name} DONE: acc {hist[0]:.3f} -> {hist[-1]:.3f} (best {best_acc:.3f})")
