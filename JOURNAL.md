@@ -7,7 +7,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 ## Standing questions
 | # | Question | Status |
 |---|---|---|
-| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | partial: SFT-LoRA 0.22, GRPO-LoRA 0.64 (baseline 0.54); RLOO, GSPO and full fine-tuning pending |
+| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | partial: SFT-LoRA 0.22, GRPO-LoRA 0.64, RLOO-LoRA 0.67 (baseline 0.54); GSPO and full fine-tuning pending |
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
@@ -84,6 +84,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Code:** `--dataset mathstory` in `train.py`; separate output dir `runs_mathstory/`. A 2-run smoke test passed (SFT and GRPO, per-form metrics logged). In that tiny test the untrained model got eq 100% / story_1 75% / story_2 0% / story_3 0% (n=4 each: anecdotal only).
 - **Queue:** `scripts/run_queue.sh` now runs Phase A (rest of the GSM8K 0.8B set) then Phase B (math-story); 2B/4B moved to the optional `scripts/run_queue_larger.sh`. Config metadata fix: the stored `reward` description now says "correct only" (earlier runs' configs still carry the stale "+0.1 format" text; the reward actually used was correctness-only since the GRPO v2 fix).
 - **Expectation (hypothesis, untested):** shorter answers mean much faster RL steps (generation dominates), so Phase B should cost far less wall-clock than Phase A; the distractor forms (story_2/3) should be the hard ones.
+
+### 2026-11-17 17:55 · RLOO-LoRA (0.8B) finished: +13 points
+- Greedy test accuracy 0.54 (baseline) → 0.48 → 0.57 → 0.66 → 0.60 → **0.67**; truncation 14% → 6% → 6% → 17% → 17% → 12%. About 3.4 h; ~16-28 s/step.
+- Training behaviour differed from GRPO: RLOO shortened answers faster (mean completion ~230-260 tokens by step ~100 vs ~340-390 for GRPO) and kept the "The answer is:" format share higher early on.
+- **Reading:** GRPO 0.64 vs RLOO 0.67 is a 3-point gap on 100 test questions (±10): not distinguishable with one seed. The epoch-to-epoch swings (0.66 → 0.60) are the same size as the gap. Both RL methods are clearly ahead of SFT (0.22).
+- Next: GSPO-LoRA, then the four full fine-tuning runs.
 
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
