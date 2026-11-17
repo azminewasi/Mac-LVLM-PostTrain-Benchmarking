@@ -12,6 +12,18 @@ from mlx_lm import load
 from mlx_lm.tuner.utils import linear_to_lora_layers
 from mlx_lm.tuner.trainer import grad_checkpoint
 
+import contextlib, mlx_lm.models.qwen3_5 as _q35
+# Qwen3.5's fast gated-delta Metal kernel has no gradient: use the chunked differentiable path (pt/gdn.py) while building training graphs only.
+from pt.gdn import make_train_update
+_orig_gdu, _TRAIN = _q35.gated_delta_update, [False]
+_train_gdu = make_train_update(_orig_gdu)
+_q35.gated_delta_update = lambda *a, **k: (_train_gdu if _TRAIN[0] else _orig_gdu)(*a, **k)
+@contextlib.contextmanager
+def train_graph():
+    _TRAIN[0] = True
+    try: yield
+    finally: _TRAIN[0] = False
+
 from pt.common import (MODELS, MODEL_DEFAULTS, build_prompt_text, encode, end_token_id, load_train, load_eval,
                        reward_fn, generate_batch, evaluate, Monitor)
 from pt.optim import lr_at, MasterAdamW
@@ -152,7 +164,7 @@ for epoch in range(args.epochs):
             ntok_total = sum(len(c) for _, c in ex); grads, tot = None, 0.0
             for mb in microbatches(ex, args.micro_bs):
                 ids = pad_batch([p + c for p, c in mb]); pl = mx.array([len(p) for p, _ in mb]); tl = mx.array([len(p) + len(c) for p, c in mb])
-                lv, g = nn.value_and_grad(model, lambda *_: sft_loss(model, ids, pl, tl, ntok_total))(ids)
+                with train_graph(): lv, g = nn.value_and_grad(model, lambda *_: sft_loss(model, ids, pl, tl, ntok_total))(ids)
                 grads = accumulate(grads, g); mx.eval(lv, grads); tot += lv.item()
             state["step"] += 1; lr, gn = apply_update(grads, state["step"] - 1)
             state["tokens"] += ntok_total; state["samples"] += len(rows)
@@ -180,7 +192,7 @@ for epoch in range(args.epochs):
                            reward=float(rewards[i]), correct=R[i][1], fmt=R[i][2], advantage=a, truncated=int(trunc[i]), gen_tokens=len(toks[i])))+"\n")
             rlog.flush()
             active = [s for s in seqs if abs(s[2]) > 1e-8]       # zero-advantage sequences give zero gradient
-            tt = time.perf_counter(); lr = gn = loss_v = float("nan"); aux_acc = np.zeros(4)
+            tt = time.perf_counter(); lr = float("nan"); gn = loss_v = 0.0; aux_acc = np.zeros(4)   # skipped step (no signal): loss/grad 0
             if active:
                 old = None
                 if args.mu > 1:                                    # behaviour log-probs for ratio / clipping
@@ -197,9 +209,9 @@ for epoch in range(args.epochs):
                         ol = None
                         if old is not None:
                             s0 = max(0, min(len(p) for p, *_ in mb) - 1); L = ids.shape[1] - 1 - s0
-                            ol = mx.array([np.pad(old[s[3]][: L], (0, max(0, L - len(old[s[3]][: L])))) for s in mb])
+                            ol = mx.array(np.stack([np.pad(old[s[3]][: L], (0, max(0, L - len(old[s[3]][: L])))) for s in mb]).astype(np.float32))
                         def f(*_): return rl_loss(model, ids, pl, tl, a, ol, args.method, args.eps_lo, args.eps_hi, len(active))
-                        (lv, aux), g = nn.value_and_grad(model, f)(ids)
+                        with train_graph(): (lv, aux), g = nn.value_and_grad(model, f)(ids)
                         grads = accumulate(grads, g); mx.eval(lv, aux, grads); loss_v += lv.item(); aux_acc += np.array(aux)
                     state["step"] += 1; lr, gn = apply_update(grads, state["step"] - 1)
             else:
