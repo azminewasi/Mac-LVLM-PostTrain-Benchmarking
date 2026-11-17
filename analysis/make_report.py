@@ -95,7 +95,7 @@ p{margin:8px 0}.sub{color:var(--dim);margin:0 0 18px}.dim{color:var(--dim)}.card
 .legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;margin:0 4px 6px}.legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}.sw.dash{outline:1px dashed var(--fg);outline-offset:1px}
 i.s0{background:var(--s0)}i.s1{background:var(--s1)}i.s2{background:var(--s2)}i.s3{background:var(--s3)}i.s4{background:var(--s4)}
 .tw{overflow-x:auto;margin:10px 0}table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card);border:1px solid var(--line)}th,td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--dim);font-weight:600;font-size:12px}table:not(.dense) td{white-space:normal}
-ul{padding-left:20px}li{margin:4px 0}.lede{font-size:17px;line-height:1.55;margin:4px 0 12px}.kicker{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}.take{border:1px solid var(--line);border-left:3px solid var(--s2);background:var(--card);padding:10px 14px;border-radius:0 8px 8px 0;margin:16px 0}ul.toc li{margin:7px 0}a{color:var(--accent)}ol li{margin:6px 0}code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:13px}@media (max-width:600px){h1{font-size:24px}}"""
+ul{padding-left:20px}li{margin:4px 0}.lede{font-size:17px;line-height:1.55;margin:4px 0 12px}.kicker{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}.take{border:1px solid var(--line);border-left:3px solid var(--s2);background:var(--card);padding:10px 14px;border-radius:0 8px 8px 0;margin:16px 0}ul.toc li{margin:7px 0}.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.cmp pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;word-break:break-word;margin:4px 0}@media (max-width:700px){.cmp{grid-template-columns:1fr}}a{color:var(--accent)}ol li{margin:6px 0}code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:13px}@media (max-width:600px){h1{font-size:24px}}"""
 
 # ------------------------------------------------------------------ numbers
 order = sorted(runs.values(), key=lambda r: (["0.8B", "2B", "4B"].index(r["model"]), METHODS.index(r["method"]), r["adapter"]))
@@ -134,6 +134,39 @@ names = [f"{r['model']} {NAMES[r['method']]} {r['adapter']}" for r in order]
 c_step = bars(names, [("mean seconds per optimizer step", "s0", [S[r["name"]]["step_s"] for r in order])], fmt="{:.1f}", ylabel="s / step")
 c_mem = bars(names, [("peak MLX (GPU) memory", "s0", [S[r["name"]]["peak"] for r in order]), ("max system RAM used", "s1", [S[r["name"]]["ram"] for r in order]), ("max swap", "s3", [S[r["name"]]["swap"] for r in order])], ymax=18, ylabel="GB", yref=(16, "16 GB unified memory"))
 c_time = bars(names, [("hours so far", "s0", [S[r["name"]]["elapsed"] for r in order])], fmt="{:.1f}", ylabel="hours")
+
+# ------------------------------------------------------------------ qualitative changes in the model's answers (from eval_epoch*.jsonl)
+import re as _re
+def style(resp):
+    return dict(fmt=bool(_re.search(r"The answer is:\s*-?\$?\d", resp)), boxed="\\boxed" in resp, latex="$$" in resp or "\\text{" in resp, md=("**" in resp or "###" in resp))
+def qual(r):
+    out = []
+    for f_ in sorted(glob.glob(f"{RUNS}/{r['name']}/eval_epoch*.jsonl"), key=lambda x: int(_re.search(r"epoch(\d+)", x).group(1))):
+        e = int(_re.search(r"epoch(\d+)", f_).group(1)); recs = read_jsonl(f_)
+        if not recs: continue
+        st_ = [style(x["response"]) for x in recs]; n = len(recs)
+        out.append(dict(epoch=e, acc=sum(x["correct"] for x in recs) / n, trunc=sum(x["truncated"] for x in recs) / n, toks=sum(x["gen_tokens"] for x in recs) / n,
+                        fmt=sum(x["fmt"] for x in st_) / n, boxed=sum(x["boxed"] for x in st_) / n, latex=sum(x["latex"] for x in st_) / n, md=sum(x["md"] for x in st_) / n, recs=recs))
+    return out
+QUAL = {r["name"]: qual(r) for r in order}
+q_rows = []
+for r in order:
+    for q in QUAL[r["name"]]:
+        q_rows.append([r["model"], NAMES[r["method"]], r["adapter"], q["epoch"], pct(q["acc"]), pct(q["trunc"]), f"{q['toks']:.0f}", pct(q["fmt"]), pct(q["boxed"]), pct(q["md"]), pct(q["latex"])])
+T_qual = tbl(["Model", "Method", "Adapter", "Epoch", "Accuracy", "Truncated", "Mean tokens", "\"The answer is:\"", "\\boxed{}", "Markdown bold/headers", "LaTeX"], q_rows, "dense")
+q_fmt_chart = lines([(f"{r['model']} {NAMES[r['method']]} {r['adapter']}", MCOL[r["method"]], r["adapter"] == "full", [(q["epoch"], q["fmt"]) for q in QUAL[r["name"]]]) for r in order if QUAL[r["name"]]], "epoch", 'share of test answers ending with "The answer is: N"', ymax=1.0, fmt="{:.0%}")
+q_tok_chart = lines([(f"{r['model']} {NAMES[r['method']]} {r['adapter']}", MCOL[r["method"]], r["adapter"] == "full", [(q["epoch"], q["toks"]) for q in QUAL[r["name"]]]) for r in order if QUAL[r["name"]]], "epoch", "mean generated tokens per test answer")
+def tail(t, n=420): t = t.strip(); return ("…" if len(t) > n else "") + t[-n:]
+def example_block(r):
+    qs = QUAL[r["name"]]
+    if len(qs) < 2: return ""
+    a, b = qs[0], qs[-1]
+    pick = next((i for i in range(len(a["recs"])) if i < len(b["recs"]) and style(a["recs"][i]["response"])["fmt"] and not style(b["recs"][i]["response"])["fmt"]), None)
+    if pick is None: pick = 0
+    ra, rb = a["recs"][pick], b["recs"][pick]
+    mk = lambda lab, q, rec: f'<div><div class="dim">{lab} · answer {esc(rec["pred"])} (gold {esc(rec["gold"])}) · {"correct" if rec["correct"] else "wrong"} · {rec["gen_tokens"]} tokens</div><pre>{esc(tail(rec["response"]))}</pre></div>'
+    return f'<h3>Same question, before and after: {r["model"]} {NAMES[r["method"]]} {r["adapter"]}</h3><p class="dim">Test question {pick}; the end of the answer at epoch 0 (untrained) and at epoch {b["epoch"]}.</p><div class="cmp">{mk("epoch 0", a, ra)}{mk(f"epoch {b["epoch"]}", b, rb)}</div>'
+EXAMPLES = "".join(example_block(r) for r in order if len(QUAL[r["name"]]) > 1)
 
 # capability estimates for training (clearly labelled)
 BASE_GB = 6.5; USABLE = 16 - BASE_GB
@@ -215,20 +248,30 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 {fig("RL completion length: shorter completions can mean fewer truncations or can mean the policy abandoned its reasoning; read it together with the reward.", len_chart) if len_chart else ""}
 <div class="take"><b>Takeaway.</b> In RL on a small model, read the reward and the completion-length curves in the first 50 steps. Reward hacking and drift show up there long before the accuracy number does. All discarded attempts are kept in W&amp;B (group <code>discarded</code>) and under <code>runs_discarded/</code>.</div>
 
-<h2 id="memory">5. Memory: the wall comes sooner</h2>
+<h2 id="style">5. What changed besides accuracy</h2>
+<p class="lede">Accuracy is one number. The answers themselves change too: their format, length and style, and some of those changes are side effects nobody asked for.</p>
+<p>The clearest example is the answer format. Our prompt ends with "End with a final line: 'The answer is: &lt;number&gt;'", and the untrained model follows it almost always. During RL we stopped rewarding that format (after it had been exploited, chapter 4). The result: in the sampled training rollouts the share ending with "The answer is: N" fell from about 0.8 to about 0.13 over the first two to three epochs, and on the greedy test answers it fell from 86% to 56% by epoch 2 (so far, in the GRPO run), while accuracy did not suffer, because the evaluator reads the last number in the answer. The model silently stopped following a formatting instruction that nothing rewarded any more. That is harmless for this benchmark and could be a real problem in a pipeline that parses the format. GRPO also gradually dropped LaTeX (80% of answers at epoch 0, 36% at epoch 2) while keeping its markdown headers.</p>
+<p><b>SFT changes the style far more.</b> After SFT the model stops writing the long, markdown-heavy, LaTeX-heavy step-by-step answers it started with (95% and 80% of answers) and writes terse plain-text solutions like the GSM8K references: mean length falls from 347 to about 90 tokens and markdown and LaTeX disappear entirely. It follows the "The answer is:" format more reliably (99-100%), but gets fewer answers right, and in the first epochs it sometimes degenerates into a repeating arithmetic loop that runs to the token cap (see the example below). So the SFT story is as much about style as about accuracy: the model traded its own, stronger way of reasoning for a shorter one it executes worse.</p>
+<div class="fig"><div class="cap">Share of the 100 test answers that end with the requested "The answer is: N" line, by epoch (epoch 0 = untrained).</div>{q_fmt_chart}</div>
+<div class="fig"><div class="cap">Mean generated tokens per test answer, by epoch: how verbose the model is.</div>{q_tok_chart}</div>
+{EXAMPLES}
+<h3>Style statistics per run and epoch</h3>{T_qual}
+<div class="take"><b>Takeaway.</b> Track style alongside accuracy: format-following, length, markdown and LaTeX use. A reward that ignores a behaviour lets that behaviour drift, and a benchmark score will not tell you.</div>
+
+<h2 id="memory">6. Memory: the wall comes sooner</h2>
 <p class="lede">A training step that peaked at almost 16 GB on a model with 1.6 GB of weights.</p>
 <p>While the second GRPO attempt was running, system swap climbed to 5 GB and step times swung between 11 and 46 seconds. Profiling one forward and backward pass explained it: without gradient checkpointing, the activations of the 0.8B for a batch of two 800-token sequences needed almost the entire 16 GB. Turning on checkpointing (recomputing activations in the backward pass) cut that to {min((x['peak_gb'] for x in mp if x['grad_checkpointing'] and x['batch']==2), default=0):.1f} GB at the cost of some speed, and the restarted GRPO run peaks at {grpo_peak} so far.</p>
 <div class="fig"><div class="cap">Peak MLX memory of one LoRA training step on the 0.8B (<code>tests/profile_memory.py</code>). Batch size and gradient checkpointing change it by 2-3x.</div>{c_prof}</div>
 <p>This is the number to carry to the larger models, and it is not reassuring. Even with checkpointing, the 0.8B needs about 5 GB of working memory on top of its 1.6 GB of weights. The 4B has 8.5 GB of weights and bigger activations, so as configured it very likely does <b>not</b> fit in the ≈{USABLE:.1f} GB we have: it would need a micro-batch of 1, shorter sequences, or a more memory-efficient backward pass for the gated-delta layers. We will measure the 2B first and decide whether the 4B runs are feasible before spending days on them.</p>
 {fig("Peak MLX memory, system RAM and swap per run so far, against the 16 GB limit.", c_mem)}
 
-<h2 id="speed">6. What a run costs in time</h2>
+<h2 id="speed">7. What a run costs in time</h2>
 <p class="lede">SFT is cheap; RL is generation-bound and slow.</p>
 <p>An SFT step (4 sequences) takes about a second, so five epochs of 500 questions finish in roughly 15 minutes. An RL step must first generate 16 answers of up to 640 tokens at decode speeds of a few hundred tokens/s, then train on them: 15-45 seconds on the 0.8B. A 625-step RL run is therefore several hours, and the 2B and 4B are roughly 2.5x and 5x slower still, which is why those use one epoch.</p>
 {fig("Mean seconds per optimizer step (SFT: 4 sequences; RL: 4 prompts x 4 rollouts).", c_step)}
 {fig("Wall-clock hours used per run so far.", c_time)}
 
-<h2 id="capability">7. So what can this MacBook train?</h2>
+<h2 id="capability">8. So what can this MacBook train?</h2>
 <p class="lede">Small models, comfortably, with LoRA; the full fine-tune of even the smallest model is a stretch.</p>
 <ul>
 <li><b>Budget:</b> macOS takes ≈{BASE_GB:.1f} GB, leaving ≈{USABLE:.1f} GB for weights, gradients, optimizer state, activations and (for RL) the generation cache.</li>
@@ -240,12 +283,13 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <h3>What fits (estimates)</h3>{T_est}
 <p class="dim">Estimates are weights plus optimizer state and a 0.5 GB allowance; activations come on top and, as chapter 5 shows, can dominate. Treat "fits" as "should fit with small batches and checkpointing".</p>
 
-<h2 id="conclusions">8. Conclusions so far</h2>
+<h2 id="conclusions">9. Conclusions so far</h2>
 <ol>
 <li><b>A 16 GB MacBook can post-train small Qwen3.5 models, but you must budget for activations, not just weights.</b> Gradient checkpointing changed a 15.8 GB step into a 6.9 GB one.</li>
 <li><b>Check backward support layer by layer.</b> Qwen3.5's hybrid architecture needed a custom differentiable kernel before anything trained.</li>
 <li><b>SFT on a small human-written set hurt a model that already reasons well.</b> More data or a gentler recipe would be needed for it to help.</li>
 <li><b>RL needs a careful reward and a small learning rate.</b> Reward that can be earned without being correct will be found within 50 steps; watch reward and length together.</li>
+<li><b>Unrewarded behaviour drifts.</b> After we stopped rewarding the "The answer is:" format, the share of answers using it fell from ~0.8 to ~0.13 without hurting the score. Track style, not just accuracy.</li>
 <li><b>Time scales brutally with model size for RL.</b> Plan for hours per run on the 0.8B and days for the larger models.</li>
 </ol>
 <h3>What we did not measure, and caveats</h3>
