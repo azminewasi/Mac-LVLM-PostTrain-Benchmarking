@@ -1,0 +1,79 @@
+# Research journal: Mac LLM/VLM Post-training Testing
+
+A running, dated log of experiments, surprises, decisions and open questions. Newest entries go at the bottom of the log.
+Each entry: **what we tried → what happened → why we think so (and how sure we are) → what we decided**.
+Times are local and approximate where marked `~`. Run data referred to here lives in `runs/` (kept) and `runs_discarded/` (failed attempts, kept as evidence); the W&B project is `macbook-posttrain` (failed attempts are in group `discarded`).
+
+## Standing questions
+| # | Question | Status |
+|---|---|---|
+| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | open (only SFT-LoRA and GRPO-LoRA have run) |
+| Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
+| Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
+| Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
+
+## Log
+
+### 2026-11-17 ~08:00 · Smoke test, and the gradient wall
+- **Tried:** 6-setup smoke test (8 training samples) of SFT/GRPO/RLOO/GSPO with LoRA and full fine-tuning on the 0.8B.
+- **Observed:** first step crashed: `Primitive::vjp not implemented for CustomKernel`. Qwen3.5's gated-delta layers use a Metal kernel with no backward pass. The library's ops-based fallback worked but took **50 s per step** (Python loop over tokens).
+- **Why:** hybrid architecture; the fast path is inference-only. (Confirmed by reading `mlx_lm/models/gated_delta.py`.)
+- **Decision:** write a chunk-parallel, matmul-based differentiable version (`pt/gdn.py`).
+
+### 2026-11-17 ~08:10 · Chunked gated-delta, two versions
+- **v1 (Neumann-series triangular inverse):** passed a random-input unit test, loss became NaN in the model, then the layer outputs were wrong (errors up to 1e14 in later layers).
+- **Why:** real keys are highly correlated and decay is near 1, so powers of the strictly-lower matrix blow up. Random test inputs hid this. (Confirmed layer by layer against the reference.)
+- **v2 (forward substitution, chunk 32):** matches the reference on the real model (logit diff 0.32, same as kernel-vs-ops; argmax agreement 100%), gradients within 4% relative L2, step time 0.6-1.6 s.
+- **Lesson:** test numerical code on real activations, not only random ones.
+
+### 2026-11-17 ~08:20 · Smoke-test oddities
+- Mean reward 0 in smoke RL runs (64-token cap) gave NaN loss in logging: all groups had zero variance, so the step was skipped. Cosmetic; now logs loss 0.
+- A `--mu 2` path crashed (`mx.array` of a list of numpy arrays): fixed. The smoke test never reached it because rewards were 0, so we added a second check with a 384-token cap.
+- A learning-rate-0 run reproduced baseline accuracy exactly: generation after training is correct. The accuracy drops seen on 4-8 sample smoke evals were noise.
+
+### 2026-11-17 08:17 · Queue bug
+- The queue passed an empty argument (`"${EXTRA[@]}"` in zsh) and every run failed instantly. Fixed by dropping the quotes.
+
+### 2026-11-17 08:40 · SFT-LoRA at lr 1e-4 collapses
+- **Observed:** 0.8B SFT LoRA, lr 1e-4: accuracy 0.54 → 0.17 after epoch 1, → 0.04 at the end; outputs degenerate to repeated "000…".
+- **Why:** lr ~10x too hot for LoRA scale 20 (the mlx-lm default is 1e-5). Confirmed by rerunning at 2e-5 (no collapse).
+- **Decision:** SFT lr 2e-5 (LoRA), 1e-5 (full); RL 5e-6 / 2e-6 (later lowered).
+
+### 2026-11-17 08:56 · First finished run: SFT-LoRA 0.8B (lr 2e-5)
+- Accuracy 0.54 (baseline) → 0.17 / 0.29 / 0.27 / 0.24 / 0.22 over 5 epochs; training loss → 0.01 (memorisation of the 500 solutions).
+- **Qualitative:** mean answer length 347 → ~90 tokens; markdown 95% → 0%, LaTeX 80% → 0%; "The answer is:" 86% → 99%. In epoch 1, 22% of answers degenerate into a repeating arithmetic loop to the token cap.
+- **Why (hypothesis, not tested):** Qwen3.5 already reasons well in a long step-by-step style; imitating 500 terse human solutions replaces that with a shorter style it executes worse. **Decision:** keep as a result; RL is the intended comparison.
+
+### 2026-11-17 09:48 · GRPO v1: reward hacking
+- **Observed:** accuracy 0.54 → 0.02 after epoch 1. Within 50 steps completion length fell 288 → 35 tokens and the mean reward settled at exactly 0.1 (the format bonus alone).
+- **Why (confirmed from curves):** `max_new=400` truncated 44% of rollouts (reward 0), while a short, wrong, well-formatted answer scored 0.1. GRPO's group normalisation amplified that gap.
+- **Decision:** reward = correctness only (format logged, not rewarded); `max_new` 640; `max_seq` 896. Discarded run kept as `runs_discarded/…v1-reward-hack` (W&B: `DISCARDED-v1`).
+
+### 2026-11-17 ~10:20 · GRPO v2: drift at lr 5e-6
+- **Observed:** after the fix, reward 0.42 → 0.1 and format rate 0.89 → 0.39 between steps 25 and 50; zero-signal groups up to 80%. Length no longer collapsed.
+- **Checked first:** gradients of the chunked layer vs the reference on the real model (total grad norm 82.3 vs 82.7, 4% rel L2): not a code bug.
+- **Why (hypothesis):** only 16 rollouts per step and about half the groups carry no signal; Adam turns small noisy gradients into full-size steps, and LoRA scale 20 amplifies them. **Decision:** RL lr 2e-6 (LoRA), 1e-6 (full). The restart did not drift (see ~12:00).
+
+### 2026-11-17 ~10:35 · Scope decision
+- Measured RL steps at 17-46 s on the 0.8B, so the 16-run queue was ~130 h. We chose: all 8 setups on the 0.8B at full spec, 2B and 4B with LoRA at 1 epoch (~50 h).
+
+### 2026-11-17 ~10:40 · GRPO v3: memory thrash
+- **Observed:** peak MLX memory 15.6 GB, swap up to 5.5 GB, step times 11-46 s on a model with 1.6 GB of weights.
+- **Profile (`tests/profile_memory.py`):** one step, micro-batch 2, 800 tokens: 15.8 GB without gradient checkpointing, 6.9 GB with it; micro-batch 1 without checkpointing 8.8 GB; micro-batch 4 with checkpointing 12.2 GB.
+- **Decision:** gradient checkpointing on for the 0.8B (it was off). Restart: peak 6.8 GB, swap ~4 GB (system), steps ~19-25 s. **Open risk:** the 4B (8.5 GB weights) probably does not fit; measure the 2B first (Q2).
+- Housekeeping: killed runs stay "running" in W&B until the heartbeat times out; discarded runs are now in W&B group `discarded`.
+
+### 2026-11-17 12:04-12:51 · GRPO v4 (current) is learning
+- Greedy test accuracy 0.54 → 0.56 (epoch 1) → 0.56 (epoch 2); truncation 14% → 8% → 27%. Training correct-rate 0.42 → 0.67 over steps 0-300.
+- **Side effect noticed:** the "The answer is:" format share fell in sampled rollouts from ~0.8 to ~0.13, and in greedy test answers from 86% to 56% (epoch 2); LaTeX use 80% → 36%. Accuracy unaffected because the scorer reads the last number. **Why:** we stopped rewarding the format. (Hypothesis, consistent with timing; not tested by re-adding the bonus.)
+- Added a qualitative section (format, length, markdown, LaTeX, before/after examples) to the report.
+
+## Methodology notes
+- Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
+- Failed attempts were kept deliberately; they explain the final settings.
+- Learning rates were corrected after failures, not swept, so cross-method comparisons are not tuned head-to-heads.
+
+## Next
+1. Finish GRPO-LoRA (0.8B), then RLOO, GSPO, then the full fine-tuning variants (queue running).
+2. Measure the 2B memory before the 4B; decide on the 4B (micro-batch 1, shorter sequences, or a leaner gated-delta backward).
+3. Update the report's conclusions when the methods can be compared.
