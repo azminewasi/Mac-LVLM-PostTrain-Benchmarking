@@ -7,11 +7,11 @@ Times are local and approximate where marked `~`. Run data referred to here live
 ## Standing questions
 | # | Question | Status |
 |---|---|---|
-| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | partial: SFT-LoRA 0.22, GRPO-LoRA 0.64, RLOO-LoRA 0.67 (baseline 0.54); GSPO and full fine-tuning pending |
+| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | LoRA arm answered, within noise: SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59 (baseline 0.54): the three RL methods are indistinguishable and all beat SFT; full fine-tuning not run |
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
-| Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: queued after the GSM8K 0.8B set |
+| Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: code ready and smoke-tested, runs not started |
 
 ## Log
 
@@ -91,12 +91,27 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Reading:** GRPO 0.64 vs RLOO 0.67 is a 3-point gap on 100 test questions (±10): not distinguishable with one seed. The epoch-to-epoch swings (0.66 → 0.60) are the same size as the gap. Both RL methods are clearly ahead of SFT (0.22).
 - Next: GSPO-LoRA, then the four full fine-tuning runs.
 
+### 2026-11-17 21:05 · GSPO-LoRA (0.8B) finished; stopping here for the day
+- Greedy test accuracy 0.54 (baseline) → 0.52 → 0.53 → 0.62 → 0.66 → **0.59**; best epoch 0.66, final 0.59; truncation 2%-12%. ~3.1 h.
+- **Reading:** the last-epoch drop (0.66 → 0.59) is within the ±10 noise of 100 test questions, so GSPO's "final" and "best" are not meaningfully different from each other or from GRPO (0.64) and RLOO (0.67). We report final-epoch numbers (no peeking at the test set to pick epochs); the best-epoch number is shown only as context.
+- **Decision (user):** stop after GSPO-LoRA because the laptop had been running for ~20 hours. The queue was cancelled; nothing is running. **Not run:** the four 0.8B full fine-tuning setups on GSM8K, all eight math-story-problems runs (the code and queue for them are ready and smoke-tested), and the 2B/4B runs.
+- **To resume:** `caffeinate -ims zsh scripts/run_queue.sh > logs/queue.log 2>&1 &` skips every finished run (it prints "already done, skipping") and continues with the full fine-tuning runs, then the math-story set. Expect the full runs to be memory-tight (about 11 GB of weights + optimizer state for the 0.8B against ≈9.5 GB usable; swap was already 3.3 GB during LoRA runs), so watch the first one and stop it if steps slow badly.
+
+## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
+| Run | Final acc | Best epoch | Hours | Peak MLX GB |
+|---|---|---|---|---|
+| untrained | 0.54 | – | – | – |
+| SFT | 0.22 | 0.54 (epoch 0) | 0.3 | 9.8 (before checkpointing) |
+| GRPO | 0.64 | 0.64 | 3.8 | 6.8 |
+| RLOO | 0.67 | 0.67 | 3.4 | 6.9 |
+| GSPO | 0.59 | 0.66 | 3.1 | 6.8 |
+
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
 - Failed attempts were kept deliberately; they explain the final settings.
 - Learning rates were corrected after failures, not swept, so cross-method comparisons are not tuned head-to-heads.
 
 ## Next
-1. Finish the 0.8B GSM8K set (RLOO and GSPO LoRA, then the four full fine-tuning runs), then the 0.8B math-story set.
+1. Resume with `scripts/run_queue.sh` (see the 21:05 entry): the four full fine-tuning runs, then the eight math-story runs. Consider multiple seeds for the LoRA RL runs, since the method differences are inside the noise.
 2. 2B/4B are out of scope for now (`scripts/run_queue_larger.sh` kept for later; measure the 2B before the 4B).
 3. Write a math-story report (per-form accuracy by epoch, answer length, speed) when Phase B has results; update the GSM8K report's conclusions when the methods can be compared.

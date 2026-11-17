@@ -5,6 +5,8 @@ Can you actually post-train LLMs on a 16 GB MacBook? This project fine-tunes **Q
 models and **full fine-tuning** on the 0.8B, then measures what each setup costs and gains (accuracy, speed, memory, system load).
 It is the companion of *Mac LLM/VLM Inference Testing* (same models, prompt and eval set, so base-model numbers carry over).
 
+**Status (2026-11-17):** the four 0.8B LoRA runs on GSM8K are finished (SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59 vs 0.54 untrained). Full fine-tuning, the math-story runs and the 2B/4B runs are not started; `scripts/run_queue.sh` resumes the first two (it skips finished runs).
+
 **Datasets:** GSM8K (500 train / first 100 test) and, second, [`azminetoushikwasi/math-story-problems`](https://huggingface.co/datasets/azminetoushikwasi/math-story-problems) (short-answer arithmetic in four forms; `--dataset mathstory`, W&B project `macbook-posttrain-mathstory`, runs in `runs_mathstory/`). The default queue runs the eight 0.8B setups on each; 2B/4B live in `scripts/run_queue_larger.sh`.
 
 **Reports:** the blog-style write-up is generated at `results/report.html` (`python report.py`, regenerates from `runs/`), and **[`JOURNAL.md`](JOURNAL.md)** is the running research journal: what we tried, what happened, why, and what is still open (including the failed attempts, kept in `runs_discarded/`).
