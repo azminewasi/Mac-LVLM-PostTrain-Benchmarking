@@ -111,6 +111,11 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Queue order now:** GSM8K full RL (guarded) → `sftgentle`, `sftself` (GSM8K, LoRA) → math-story LoRA: sft, sftgentle, sftself, grpo, rloo, gspo.
 - **Monitoring:** a 20-minute health check (session cron) plus a log watcher; the check restarts a dead queue and fixes small failures.
 
+### 2026-11-17 23:08 · Correction: full-RL (GRPO-full) is feasible after all
+- **Observed:** GRPO-full (micro-batch 1) ran 60 steps in 22 min: ~20 s/step (generation ~12 s, training 0-18 s), peak MLX 11.1 GB, swap 2.5-3.8 GB, no thrash; the watchdog did not trigger. Reward noisy (0.19-0.56), no collapse so far.
+- **What this changes:** my 22:45 conclusion that full fine-tuning "does not fit" was premature. The SFT-full thrash (steps 2.4 s → 15-27 s, GPU util 33%) happened at about the same memory (11.1 GB peak) and swap, so it may have been transient or caused by other activity on the machine at that moment (several shell and test processes were running); I cannot tell which. Memory is clearly borderline (swap near its limit, training-step times vary 0-18 s), so full runs are feasible but fragile. **Open:** re-run SFT-full later (it needs ~25 min if it does not thrash).
+- **Queue consequence:** since the RL check passed, the queue continues with RLOO-full and GSPO-full (~3.5 h each) before the SFT fixes and the math-story runs, i.e. ~10 h before math-story starts. The user can reorder if they prefer the math-story/SFT-fix runs first.
+
 ## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch | Hours | Peak MLX GB |
 |---|---|---|---|---|
