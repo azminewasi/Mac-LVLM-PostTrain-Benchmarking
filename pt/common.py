@@ -67,10 +67,12 @@ def has_format(text):
     return bool(re.search(r"The answer is:\s*-?\$?\d", text))
 
 def reward_fn(text, gold, truncated):
-    """correct (1.0) + small format bonus (0.1, only for completed generations). Returns (total, correct, fmt)."""
+    """Reward = correctness only (1.0 if finished and correct). The format flag is returned for logging but NOT rewarded:
+    a format bonus independent of correctness let GRPO 'hack' it by emitting short, wrong, well-formatted answers
+    (they scored 0.1 while long/truncated rollouts scored 0). Returns (total, correct, fmt)."""
     c = 1.0 if (not truncated and is_correct(text, gold)) else 0.0
     f = 0.1 if (not truncated and has_format(text)) else 0.0
-    return c + f, c, f
+    return c, c, f
 
 
 # ------------------------------------------------------------------ system monitor

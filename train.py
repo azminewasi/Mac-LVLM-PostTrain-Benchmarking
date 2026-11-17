@@ -38,12 +38,12 @@ ap.add_argument("--project", default="macbook-posttrain"); ap.add_argument("--en
 ap.add_argument("--wandb-mode", default="online"); ap.add_argument("--out", default="runs")
 # optimisation
 ap.add_argument("--lr", type=float, default=None); ap.add_argument("--batch", type=int, default=None, help="SFT: sequences/step; RL: prompts/step")
-ap.add_argument("--micro-bs", type=int, default=None); ap.add_argument("--grad-ckpt", action="store_true"); ap.add_argument("--max-seq", type=int, default=768)
+ap.add_argument("--micro-bs", type=int, default=None); ap.add_argument("--grad-ckpt", action="store_true"); ap.add_argument("--max-seq", type=int, default=896)
 ap.add_argument("--clip-norm", type=float, default=1.0)
 ap.add_argument("--lora-rank", type=int, default=16); ap.add_argument("--lora-scale", type=float, default=20.0); ap.add_argument("--lora-dropout", type=float, default=0.0)
 ap.add_argument("--quantize-base", type=int, default=0, help="4/8 = QLoRA-style quantised base (LoRA only)")
 # RL
-ap.add_argument("--group", type=int, default=4, help="completions per prompt (G)"); ap.add_argument("--max-new", type=int, default=400)
+ap.add_argument("--group", type=int, default=4, help="completions per prompt (G)"); ap.add_argument("--max-new", type=int, default=640)
 ap.add_argument("--temp", type=float, default=1.0); ap.add_argument("--mu", type=int, default=1, help="gradient steps per rollout batch")
 ap.add_argument("--eps-lo", type=float, default=None); ap.add_argument("--eps-hi", type=float, default=None)
 ap.add_argument("--gen-batch", type=int, default=16)
@@ -62,7 +62,7 @@ args.eps_lo = args.eps_lo or tight[0]; args.eps_hi = args.eps_hi or tight[1]
 
 run_name = f"{args.model}__{args.method}__{args.adapter}"
 out = f"{args.out}/{run_name}"; os.makedirs(out, exist_ok=True)
-if os.path.exists(f"{out}/DONE"): raise SystemExit(f"{run_name} already done")
+if os.path.exists(f"{out}/DONE"): print(f"{run_name} already done, skipping"); raise SystemExit(0)
 mx.random.seed(args.seed); np.random.seed(args.seed)
 
 # ---------------------------------------------------------------- model
