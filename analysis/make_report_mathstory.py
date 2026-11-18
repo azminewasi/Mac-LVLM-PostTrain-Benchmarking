@@ -4,6 +4,7 @@ import json, os, sys, glob, datetime
 import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from svgkit import lines, bars, tbl, fig, CSS, esc
+from perfkit import perf_section
 
 RUNS, GSM, OUT = "runs_mathstory", "runs", "results"
 METHODS = ["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"]
@@ -20,7 +21,7 @@ def load(base):
         if not met: continue
         ev = [x for x in met if "eval/accuracy" in x]
         tr = [x for x in met if "time/step_s" in x and "reward/mean" in x]
-        out[m] = dict(ev=ev, tr=tr, done=os.path.exists(f"{d}/DONE"), hours=max(x.get("time/elapsed_s", 0) for x in met) / 3600,
+        out[m] = dict(met=met, ev=ev, tr=tr, done=os.path.exists(f"{d}/DONE"), hours=max(x.get("time/elapsed_s", 0) for x in met) / 3600,
                       peak=max((x["mem/peak_gb"] for x in met if "mem/peak_gb" in x), default=0))
     return out
 R, G = load(RUNS), load(GSM)
@@ -63,6 +64,12 @@ for m in METHODS:
     if m in G and m in R and R[m]["done"]: gsm_rows.append([GSM_NAMES[m], pc(G[m]["ev"][0]["eval/accuracy"]) + " → " + pc(G[m]["ev"][-1]["eval/accuracy"]), f"{G[m]['hours']:.1f}", pc(acc(base)) + " → " + pc(acc(fin(m))), f"{R[m]['hours']:.1f}"])
 T_gsm = tbl(["Method (LoRA)", "GSM8K (untrained → final)", "GSM8K hours", "math-story (untrained → final)", "math-story hours"], gsm_rows)
 
+_ms = lambda D_, k: [x[k] for m in ("grpo", "rloo", "gspo") if m in D_ for x in D_[m]["tr"] if k in x]
+_note = ""
+if _ms(R, "time/step_s") and _ms(G, "time/step_s"):
+    _note = (f"These are the six 0.8B LoRA runs on math-story. Compared with the GSM8K runs of the same methods, answers are much shorter, so an RL step took {np.mean(_ms(R, 'time/step_s')):.0f} s on average instead of {np.mean(_ms(G, 'time/step_s')):.0f} s, "
+             f"and the whole RL run {np.mean([R[m]['hours'] for m in ('grpo', 'rloo', 'gspo') if m in R]):.1f} h instead of {np.mean([G[m]['hours'] for m in ('grpo', 'rloo', 'gspo') if m in G]):.1f} h.")
+PERF = perf_section([dict(label=NAMES[m].replace(" (equation solutions)", ""), cls=MCOL[m], kind="rl" if m in ("grpo", "rloo", "gspo") else "sft", adapter="lora", met=R[m]["met"]) for m in METHODS if m in R], 6, _note)
 gb = lambda m: acc(fin(m)) if m in R else None
 best_rl = max(rl, key=lambda m: acc(fin(m))) if rl else None
 first_ep = {m: acc(R[m]["ev"][1]) for m in rl_done if len(R[m]["ev"]) > 1}
@@ -122,7 +129,8 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 {T_gsm}
 <p>On GSM8K the model already reasons well in its own long, step-by-step style, supervised fine-tuning on human solutions pulled it away from that style, and RL gave gains of 5 to 13 points (up to 16 with full fine-tuning). Here the untrained model is held back by rambling, a short templated style is something it can execute, and so both SFT on clean solutions and RL give very large gains. The shared lesson: <b>post-training helps when it teaches something the model can actually do, and the cheapest reliable signal is a verifiable reward.</b></p>
 
-<h2 id="conclusions">6. Conclusions</h2>
+{PERF}
+<h2 id="conclusions">7. Conclusions</h2>
 <ol>
 <li>On a clean, verifiable task, RL with a correctness-only reward matched the best supervised recipe without reference solutions.</li>
 <li>SFT works when reference solutions are short, correct and executable; a gentler learning rate was better than the aggressive one.</li>

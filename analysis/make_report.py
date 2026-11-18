@@ -3,6 +3,8 @@ inline-SVG charts, no matplotlib / W&B needed, and it works on partial results (
 Usage (from the project root):  python analysis/make_report.py     (report.py is a thin wrapper)"""
 import json, os, glob, html, datetime
 import numpy as np
+import sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from perfkit import perf_section
 
 RUNS = "runs"; OUT = "results"
 METHODS = ["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"]
@@ -121,6 +123,8 @@ for r in order:
 T_res = tbl(["Model", "Method", "Adapter", "Status", "Baseline acc", "Final acc", "Best acc", "Gain", "Trainable", "LR", "Step s", "Peak GB", "Swap GB", "Hours"], rows, "dense")
 
 ndone = sum(r["done"] for r in order)
+PERF = perf_section([dict(label=f"{NAMES[r['method']]} {r['adapter']}", cls=MCOL[r["method"]], kind="sft" if r["method"].startswith("sft") else "rl", adapter=r["adapter"], met=r["met"]) for r in order if r["model"] == "0.8B"], 8,
+                    "All numbers below are from the 0.8B runs on GSM8K: 500 questions for 5 epochs (2 for the gentle SFT variants), one run at a time on the 16 GB MacBook.", thrash_note=" The one real slow-down we saw came from a different cause, an activation footprint too large for memory before we turned on gradient checkpointing (chapter 6).")
 acc_charts = ""
 for model in ["0.8B", "2B", "4B"]:
     ser = [(f"{NAMES[r['method']]} {r['adapter']}", MCOL[r["method"]], r["adapter"] == "full", [(e, a) for e, a, _ in r["ev"]]) for r in order if r["model"] == model and r["ev"]]
@@ -273,7 +277,8 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 {fig("Mean seconds per optimizer step (SFT: 4 sequences; RL: 4 prompts x 4 rollouts).", c_step)}
 {fig("Wall-clock hours per run.", c_time)}
 
-<h2 id="capability">8. So what can this MacBook train?</h2>
+{PERF}
+<h2 id="capability">9. So what can this MacBook train?</h2>
 <p class="lede">Small models, comfortably, with LoRA; the full fine-tune of even the smallest model is a stretch.</p>
 <ul>
 <li><b>Budget:</b> macOS takes ≈{BASE_GB:.1f} GB, leaving ≈{USABLE:.1f} GB for weights, gradients, optimizer state, activations and (for RL) the generation cache.</li>
@@ -285,7 +290,7 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <h3>What fits (estimates)</h3>{T_est}
 <p class="dim">Estimates are weights plus optimizer state and a 0.5 GB allowance; activations come on top and, as chapter 5 shows, can dominate. Treat "fits" as "should fit with small batches and checkpointing".</p>
 
-<h2 id="conclusions">9. Conclusions</h2>
+<h2 id="conclusions">10. Conclusions</h2>
 <ol>
 <li><b>A 16 GB MacBook can post-train small Qwen3.5 models, but you must budget for activations, not just weights.</b> Gradient checkpointing changed a 15.8 GB step into a 6.9 GB one.</li>
 <li><b>Check backward support layer by layer.</b> Qwen3.5's hybrid architecture needed a custom differentiable kernel before anything trained.</li>
