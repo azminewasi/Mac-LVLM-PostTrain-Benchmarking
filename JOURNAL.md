@@ -121,6 +121,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Reading:** 0.68 is the highest GSM8K result so far, but vs RLOO-LoRA 0.67, GRPO-LoRA 0.64 and GSPO-LoRA 0.59 the gaps are inside the ±10 noise of 100 test questions and one seed, so no ranking of full vs LoRA is justified. Same early dip as the LoRA runs (0.48 at epoch 1) followed by a steady rise.
 - Next: RLOO-full, GSPO-full, then the SFT fixes and the math-story LoRA runs.
 
+### 2026-11-18 04:45 · RLOO-full (0.8B) finished: 0.68
+- Greedy test accuracy 0.54 → 0.57 → 0.51 → 0.62 → 0.61 → 0.68 (baseline → epoch 5); truncation 0.14 → 0.05 → 0.13 → 0.1 → 0.13 → 0.14. ~2.8 h, ~14-17 s/step, peak MLX 11.1 GB, swap ~2.5-3.5 GB (never exhausted).
+- **Reading:** ties GRPO-full (0.68) and is close to RLOO-LoRA (0.67): the full-vs-LoRA and method differences are inside the ±10 noise of 100 test questions, one seed.
+- **Qualitative:** the "The answer is:" format share collapsed to ~0.0 from about step 250 (GRPO-full kept ~0.7-0.8, GRPO-LoRA fell to ~0.13): another case of an unrewarded behaviour disappearing without any effect on the correctness-only score. Reward kept rising (training reward ~0.85 at the end) while greedy test accuracy plateaued at ~0.61-0.68.
+- Next: GSPO-full, then `sftgentle` / `sftself` (GSM8K), then the six math-story LoRA runs.
+
 ## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch | Hours | Peak MLX GB |
 |---|---|---|---|---|
