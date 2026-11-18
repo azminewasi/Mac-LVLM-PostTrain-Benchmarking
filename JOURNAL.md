@@ -11,7 +11,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 | Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
 | Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
 | Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
-| Q7 | Does SFT stop hurting with (a) a gentle recipe on human solutions, or (b) self-distillation on the model's own correct answers? | open: `sftgentle` / `sftself` queued after the RL-full check |
+| Q7 | Does SFT stop hurting with (a) a gentle recipe on human solutions, or (b) self-distillation on the model's own correct answers? | answered (one seed, n=100): (a) partly: 0.37 vs 0.22 (baseline 0.54); (b) yes: 0.54, no drop |
 | Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: code ready and smoke-tested, runs not started |
 
 ## Log
@@ -149,6 +149,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Lesson:** never run two model jobs concurrently on this machine, even "light" ones; the memory limit is per-GPU, not per-process.
 - **Action:** killed both, removed the partial run directories (the failed attempts' W&B runs are tagged `discarded` + `oom-concurrent`), and restarted `scripts/run_queue.sh` (log `logs/queue7.log`). It skipped everything finished and is running GSM8K `sftself` (chunk-fixed code) first, then the math-story set (sft, sftgentle, sftself, grpo, rloo, gspo), strictly one at a time.
 
+### 2026-11-18 08:50 · `sftself` (GSM8K, LoRA) finished: 0.54, no drop (the SFT fix works, but does not improve)
+- **Recipe:** fine-tune on the untrained model's own correct, finished answers (533 examples from 310/500 questions; 2,000 answers sampled at T=1.0, 64% finished), lr 5e-6, 2 epochs (267 steps, ~3 s/step). Greedy test accuracy 0.54 → 0.46 → **0.54** (final = baseline); truncation 14% → 10% → 10%. Total ~19 min plus ~40 min of sampling.
+- **Style (epoch 2 vs baseline):** mean answer length 347 → 343 tokens, "The answer is:" 86% → 90%, markdown 95% → 97%, LaTeX 80% → 78%: the model's own style is largely preserved, unlike the human-solution runs (answers ~90 tokens, markdown/LaTeX gone).
+- **Comparison (final test accuracy, baseline 0.54):** SFT on human solutions: 0.22 (lr 2e-5, 5 epochs); `sftgentle` 0.37 (human solutions, lr 5e-6, 2 epochs); `sftself` 0.54 (own answers, lr 5e-6, 2 epochs). Holding the gentle recipe fixed, changing only the training data from human solutions to the model's own answers removes the drop, which supports **data source (style/distribution match) as the main cause**, with learning rate and epochs a secondary factor.
+- **Caveats:** n=100, one seed; the epoch-1 dip (0.46) was within noise of the final value; `sftself` neither improved nor hurt accuracy, as expected for training on the model's own outputs (it can only reinforce what it already does); the data covers only questions the model already solves (62%) and finished answers (biased toward shorter ones).
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
@@ -161,6 +167,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 | RLOO, full | 0.68 | 0.68 | 2.8 | 11.1 |
 | GSPO, full | 0.70 | 0.72 | 2.8 | 11.1 |
 | SFT gentle, LoRA | 0.37 | 0.54 (epoch 0) | 0.2 | – |
+| SFT self-distilled, LoRA | 0.54 | 0.54 | 0.2 (+0.7 sampling) | – |
 
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
