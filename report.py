@@ -1,2 +1,4 @@
-"""Regenerates results/report.html (blog-style report) from runs/. Kept as the entry point the queue calls at the end."""
-import runpy; runpy.run_path("analysis/make_report.py", run_name="__main__")
+"""Regenerates the HTML reports from the local run folders: results/report.html (GSM8K) and results/report_mathstory.html (math-story-problems)."""
+import runpy
+runpy.run_path("analysis/make_report.py", run_name="__main__")
+runpy.run_path("analysis/make_report_mathstory.py", run_name="__main__")
