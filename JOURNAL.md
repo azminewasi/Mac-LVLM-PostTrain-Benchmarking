@@ -205,6 +205,20 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Caveats:** n=100 per form, one seed. Test equations never appear in train; the train distribution (story forms) differs from the evaluated bare-equation form but eq reached 99%.
 - Next: math-story RLOO, GSPO (LoRA).
 
+### 2026-11-18 12:50 · math-story-problems, RLOO (LoRA) finished: 0.565 → 0.98 (peak 1.000 at epoch 2)
+- **Setup:** as the other RL runs (lr 2e-6, correctness-only reward, 625 steps, ~1.1 h, step time fell from ~26 s to ~3 s as answers shortened; peak MLX 6.9 GB).
+| Epoch | Overall | eq | story_1 | story_2 | story_3 | Mean tokens | Truncated |
+|---|---|---|---|---|---|---|---|
+| 0 | 56.5% | 90% | 74% | 54% | 8% | 302 | 18% |
+| 1 | 99.5% | 99% | 100% | 100% | 99% | 123 | 0% |
+| 2 | 100% | 100% | 100% | 100% | 100% | 95 | 0% |
+| 3 | 99.5% | 99% | 100% | 100% | 99% | 72 | 0% |
+| 4 | 98% | 97% | 98% | 98% | 99% | 73 | 0% |
+| 5 | 98% | 97% | 98% | 98% | 99% | 73 | 0% |
+- **Reading:** the fastest learner on this dataset: 0.995 after one epoch and a perfect 400/400 at epoch 2 (GRPO needed four epochs to reach 0.99). It then slipped to 0.98 for epochs 4-5 (8 wrong of 400); the final-epoch number is the one reported. Answers kept shrinking (302 → 73 tokens), and the remaining errors are arithmetic slips in the terse style (e.g. 2640 - 508 + 1425 written as 3555 instead of 3557; one story where the first subtraction was miscomputed), not misreading the question. Consistent with a mild terseness/precision trade-off late in training (hypothesis; the effect is small: 8 vs 2 wrong answers is borderline significant at best).
+- **Caveats:** 400 prompts, one seed; at 98-100% accuracy differences between GRPO (0.99), RLOO (0.98) and `sftgentle` (0.978) are not meaningful.
+- Next: math-story GSPO (LoRA), the last run in the queue.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
