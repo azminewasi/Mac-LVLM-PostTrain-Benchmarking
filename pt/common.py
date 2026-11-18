@@ -184,7 +184,12 @@ def build_self_data(model, tokenizer, train_rows, path, k=4, per_q=2, max_new=64
     if os.path.exists(path):
         return [json.loads(l) for l in open(path)]
     prompts = [encode(tokenizer, build_prompt_text(tokenizer, r["question"])) for r in train_rows for _ in range(k)]
-    texts, toks, trunc, stats = generate_batch(model, tokenizer, prompts, max_new, temp, batch_size=gen_batch)
+    # generate in chunks of 16 questions (16*k prompts): one call over all 2000 prompts exhausts Metal's buffer-resource limit
+    texts, toks, trunc, step = [], [], [], 16 * k
+    for i in range(0, len(prompts), step):
+        t_, k_, r_, stats = generate_batch(model, tokenizer, prompts[i:i + step], max_new, temp, batch_size=gen_batch)
+        texts += t_; toks += k_; trunc += r_; mx.clear_cache()
+        if (i // step) % 5 == 0: print(f"self-distillation sampling: {min(i + step, len(prompts))}/{len(prompts)} answers", flush=True)
     rows, n_with = [], 0
     for qi, r in enumerate(train_rows):
         got = []

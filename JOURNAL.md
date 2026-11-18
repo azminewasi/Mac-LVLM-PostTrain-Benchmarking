@@ -138,6 +138,11 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Style (epoch 2):** mean answer length 347 → 88 tokens, "The answer is:" format 86% → 99%, markdown 95% → 0%, LaTeX 80% → 0%.
 - **Reading:** a gentler recipe roughly halves the damage (original SFT: 0.22 final, 0.17 after epoch 1) but accuracy still falls 17 points and the model still moves to the terse human style. This supports (does not prove) that the **data source**, not just the learning rate or number of epochs, is the main problem; `sftself` (the model's own correct answers) is the direct test. Caveat: n=100, one seed, only one gentle setting tried (no lr/epoch sweep).
 
+### 2026-11-18 07:54 · `sftself` failed (Metal resource limit); fixed and re-run
+- **Failure:** `RuntimeError: [metal::malloc] Resource limit (499000) exceeded` in `build_self_data` after ~13 min: sampling all 2,000 answers (500 questions x 4) in a single `batch_generate` call exhausts Metal's per-process buffer-count limit. The RL runs never hit it because they generate only 16 prompts per call. The smoke test passed because it only generated 24 answers.
+- **Fix (`pt/common.py`):** generate in chunks of 16 questions (64 prompts) and `mx.clear_cache()` between chunks; progress is printed every 5 chunks.
+- **Queue effect:** the queue logged `FAILED` and moved on to the math-story phase (SFT first). The GSM8K `sftself` was re-launched by hand in parallel (SFT is light on memory; swap stayed ~1.8 GB) with log `logs/sftself_gsm8k.log`; the math-story `sftself` later in the queue will use the fixed code.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
