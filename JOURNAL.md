@@ -155,6 +155,20 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Comparison (final test accuracy, baseline 0.54):** SFT on human solutions: 0.22 (lr 2e-5, 5 epochs); `sftgentle` 0.37 (human solutions, lr 5e-6, 2 epochs); `sftself` 0.54 (own answers, lr 5e-6, 2 epochs). Holding the gentle recipe fixed, changing only the training data from human solutions to the model's own answers removes the drop, which supports **data source (style/distribution match) as the main cause**, with learning rate and epochs a secondary factor.
 - **Caveats:** n=100, one seed; the epoch-1 dip (0.46) was within noise of the final value; `sftself` neither improved nor hurt accuracy, as expected for training on the model's own outputs (it can only reinforce what it already does); the data covers only questions the model already solves (62%) and finished answers (biased toward shorter ones).
 
+### 2026-11-18 09:12 · math-story-problems, SFT (LoRA, equation-derived solutions) finished: 0.565 → 0.94
+- **Setup:** 500 train items (one random story form each), targets generated from the equation (`a + b = c / c - d = e / The answer is: e`), lr 2e-5, 5 epochs, 625 steps (~0.8-1.3 s/step, ~18 min), peak MLX ~3.3 GB. Evaluation: first 100 test items in all four forms (400 prompts), greedy, 512-token cap, project `macbook-posttrain-mathstory`.
+| Epoch | Overall | eq | story_1 | story_2 | story_3 | Mean tokens | Truncated |
+|---|---|---|---|---|---|---|---|
+| 0 | 56% | 90% | 74% | 54% | 8% | 302 | 18% |
+| 1 | 65% | 56% | 67% | 68% | 68% | 43 | 0% |
+| 2 | 84% | 69% | 89% | 87% | 89% | 42 | 0% |
+| 3 | 92% | 87% | 94% | 93% | 94% | 42 | 0% |
+| 4 | 94% | 89% | 95% | 95% | 95% | 42 | 0% |
+| 5 | 94% | 89% | 95% | 96% | 96% | 42 | 0% |
+- **Reading:** unlike on GSM8K, SFT is a large win here (+37 points overall). The baseline's weakness was mostly the long distractor story (8%, with 65% of its answers truncated at 512 tokens, 23% correct among those that finished); SFT teaches a short, correct arithmetic style (~42 tokens, never truncated) that the model can execute. The bare-equation form dipped at epoch 1 (90% → 56%) because training used only story forms, then recovered to ~89%.
+- **Why SFT works here but not on GSM8K (hypothesis, untested):** the equation-derived targets are short, always correct and within what a 0.8B model can execute, whereas GSM8K's human solutions skip arithmetic the model cannot reproduce. Caveats: n=100 per form (±10 points), one seed; the SFT targets are an easy deterministic template, so this says little about SFT on natural-language solutions.
+- **Next:** math-story `sftgentle`, `sftself`, then GRPO, RLOO, GSPO (LoRA). The RL methods need to beat ~0.94 to matter. The report generator only reads `runs/` (GSM8K); a math-story report is still to be written once more runs exist.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
