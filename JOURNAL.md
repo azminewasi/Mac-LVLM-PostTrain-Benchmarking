@@ -133,6 +133,11 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Qualitative:** all RL runs lost the unrewarded "The answer is:" format to varying degrees (GRPO-LoRA ~0.13, RLOO-full ~0.0, GSPO-full ~0.2-0.3, GRPO-full ~0.7-0.8) with no effect on the correctness-only score.
 - Next in the queue: `sftgentle` and `sftself` (GSM8K, LoRA), then the six math-story LoRA runs.
 
+### 2026-11-18 07:50 · `sftgentle` (GSM8K, LoRA) finished: 0.37 (still below the 0.54 baseline)
+- **Recipe:** the original human solutions, but gentle: lr 5e-6 (was 2e-5), 2 epochs (was 5). Greedy test accuracy 0.54 → 0.32 → **0.37**; truncation 14% → 6% → 1%. About 9 min.
+- **Style (epoch 2):** mean answer length 347 → 88 tokens, "The answer is:" format 86% → 99%, markdown 95% → 0%, LaTeX 80% → 0%.
+- **Reading:** a gentler recipe roughly halves the damage (original SFT: 0.22 final, 0.17 after epoch 1) but accuracy still falls 17 points and the model still moves to the terse human style. This supports (does not prove) that the **data source**, not just the learning rate or number of epochs, is the main problem; `sftself` (the model's own correct answers) is the direct test. Caveat: n=100, one seed, only one gentle setting tried (no lr/epoch sweep).
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
@@ -144,6 +149,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 | GRPO, full | 0.68 | 0.68 | 3.0 | 11.1 |
 | RLOO, full | 0.68 | 0.68 | 2.8 | 11.1 |
 | GSPO, full | 0.70 | 0.72 | 2.8 | 11.1 |
+| SFT gentle, LoRA | 0.37 | 0.54 (epoch 0) | 0.2 | – |
 
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
