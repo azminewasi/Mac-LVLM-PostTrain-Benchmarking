@@ -127,14 +127,23 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Qualitative:** the "The answer is:" format share collapsed to ~0.0 from about step 250 (GRPO-full kept ~0.7-0.8, GRPO-LoRA fell to ~0.13): another case of an unrewarded behaviour disappearing without any effect on the correctness-only score. Reward kept rising (training reward ~0.85 at the end) while greedy test accuracy plateaued at ~0.61-0.68.
 - Next: GSPO-full, then `sftgentle` / `sftself` (GSM8K), then the six math-story LoRA runs.
 
-## Results so far (0.8B, LoRA, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
-| Run | Final acc | Best epoch | Hours | Peak MLX GB |
+### 2026-11-18 07:30 · GSPO-full (0.8B) finished: 0.70; the full-fine-tuning RL set is complete
+- Greedy test accuracy 0.54 → 0.59 → 0.72 → 0.61 → 0.65 → **0.70** (baseline → epoch 5; best epoch 0.72); truncation 14% → 3% → 5% → 8% → 10% → 10%. ~2.8 h, ~12-20 s/step, peak MLX 11.1 GB, swap 2.5-4.0 GB (the swap file grew from 4 to 5.1 GB near the end; step times unaffected).
+- **GSM8K 0.8B summary (final-epoch test accuracy, baseline 0.54, n=100, one seed):** LoRA: SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59; full fine-tuning: GRPO 0.68, RLOO 0.68, GSPO 0.70 (SFT-full was stopped early, see the 22:45 entry, and has not been re-run). Every RL run is above the baseline and all RL runs are within ±10 points of each other: **no ranking of methods or of full-vs-LoRA is statistically justified**; epoch-to-epoch swings (e.g. GSPO-full 0.72 → 0.61) are as large as the differences between runs.
+- **Qualitative:** all RL runs lost the unrewarded "The answer is:" format to varying degrees (GRPO-LoRA ~0.13, RLOO-full ~0.0, GSPO-full ~0.2-0.3, GRPO-full ~0.7-0.8) with no effect on the correctness-only score.
+- Next in the queue: `sftgentle` and `sftself` (GSM8K, LoRA), then the six math-story LoRA runs.
+
+## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
+| Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
 | untrained | 0.54 | – | – | – |
-| SFT | 0.22 | 0.54 (epoch 0) | 0.3 | 9.8 (before checkpointing) |
-| GRPO | 0.64 | 0.64 | 3.8 | 6.8 |
-| RLOO | 0.67 | 0.67 | 3.4 | 6.9 |
-| GSPO | 0.59 | 0.66 | 3.1 | 6.8 |
+| SFT, LoRA | 0.22 | 0.54 (epoch 0) | 0.3 | 9.8 (before checkpointing) |
+| GRPO, LoRA | 0.64 | 0.64 | 3.8 | 6.8 |
+| RLOO, LoRA | 0.67 | 0.67 | 3.4 | 6.9 |
+| GSPO, LoRA | 0.59 | 0.66 | 3.1 | 6.8 |
+| GRPO, full | 0.68 | 0.68 | 3.0 | 11.1 |
+| RLOO, full | 0.68 | 0.68 | 2.8 | 11.1 |
+| GSPO, full | 0.70 | 0.72 | 2.8 | 11.1 |
 
 ## Methodology notes
 - Evaluation: first 100 GSM8K test questions, greedy, thinking off, 512-token cap; ±10 points at 95% confidence; one seed per setup.
