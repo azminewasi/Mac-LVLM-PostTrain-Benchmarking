@@ -5,7 +5,7 @@ Can you actually post-train LLMs on a 16 GB MacBook? This project fine-tunes **Q
 models and **full fine-tuning** on the 0.8B, then measures what each setup costs and gains (accuracy, speed, memory, system load).
 It is the companion of *Mac LLM/VLM Inference Testing* (same models, prompt and eval set, so base-model numbers carry over).
 
-**Status (2026-11-17):** the four 0.8B LoRA runs on GSM8K are finished (SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59 vs 0.54 untrained). Full fine-tuning, the math-story runs and the 2B/4B runs are not started; `scripts/run_queue.sh` resumes the first two (it skips finished runs).
+**Status (2026-11-18):** the planned runs are complete. GSM8K (0.8B, untrained 0.54): LoRA SFT 0.22 / gentle 0.37 / self-distilled 0.54, LoRA GRPO 0.64 / RLOO 0.67 / GSPO 0.59, full fine-tuning GRPO 0.68 / RLOO 0.68 / GSPO 0.70. Math-story-problems (untrained 0.565): SFT 0.94 / gentle 0.978 / self-distilled 0.635, GRPO 0.99 / RLOO 0.98 / GSPO 0.99. One seed, 100 (GSM8K) or 400 (math-story) test prompts: small differences are not meaningful. Not run: 2B/4B, SFT-full on GSM8K, full fine-tuning on math-story.
 
 **Datasets:** GSM8K (500 train / first 100 test) and, second, [`azminetoushikwasi/math-story-problems`](https://huggingface.co/datasets/azminetoushikwasi/math-story-problems) (short-answer arithmetic in four forms; `--dataset mathstory`, W&B project `macbook-posttrain-mathstory`, runs in `runs_mathstory/`). The default queue runs the eight 0.8B setups on each; 2B/4B live in `scripts/run_queue_larger.sh`.
 

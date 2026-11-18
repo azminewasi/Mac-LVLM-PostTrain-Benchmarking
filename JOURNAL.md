@@ -219,6 +219,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Caveats:** 400 prompts, one seed; at 98-100% accuracy differences between GRPO (0.99), RLOO (0.98) and `sftgentle` (0.978) are not meaningful.
 - Next: math-story GSPO (LoRA), the last run in the queue.
 
+### 2026-11-18 15:10 · math-story-problems, GSPO (LoRA) finished: 0.565 → 0.993; the queue is complete
+- **Result:** greedy test accuracy 0.565 → 95.0% → 97.2% → 99.0% → 99.2% → **99.2%** (all four forms 99-100% at the end; long story 8% → 99%); mean answer length 302 → 223 tokens (GRPO ~149, RLOO ~73), no truncation; ~2.3 h (step time ~20 s early, ~7-12 s late). GSPO shortened its answers least of the three RL methods, which is why its steps stayed slower.
+- **Math-story summary (final test accuracy, baseline 0.565, 400 prompts, one seed):** SFT equation solutions 0.94; `sftgentle` 0.978; `sftself` 0.635; GRPO 0.99; RLOO 0.98 (peak 1.000 at epoch 2); GSPO 0.992. Among the RL methods and `sftgentle` the differences are not meaningful near the ceiling.
+- **All planned runs are done.** The queue printed `QUEUE_DONE` at ~15:11 and regenerated both reports (`results/report.html`, `results/report_mathstory.html`). The 20-minute health-check job was cancelled.
+- **Not done / open:** 2B and 4B runs (`scripts/run_queue_larger.sh`, 4B unlikely to fit); SFT-full on GSM8K (stopped early, may have thrashed only transiently); SFT-full and full-RL on math-story; multiple seeds; the model/data caches have not been cleaned up yet.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
@@ -239,6 +245,6 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - Learning rates were corrected after failures, not swept, so cross-method comparisons are not tuned head-to-heads.
 
 ## Next
-1. Resume with `scripts/run_queue.sh` (see the 21:05 entry): the four full fine-tuning runs, then the eight math-story runs. Consider multiple seeds for the LoRA RL runs, since the method differences are inside the noise.
+1. The planned queue is complete (see the 2026-11-18 15:10 entry). Candidate follow-ups: multiple seeds for the RL methods (differences are inside the noise), SFT-full on GSM8K and the full-fine-tuning runs on math-story, the 2B model.
 2. 2B/4B are out of scope for now (`scripts/run_queue_larger.sh` kept for later; measure the 2B before the 4B).
 3. Write a math-story report (per-form accuracy by epoch, answer length, speed) when Phase B has results; update the GSM8K report's conclusions when the methods can be compared.
