@@ -190,6 +190,21 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Cross-dataset comparison of the three SFT recipes (final test accuracy; baseline in brackets):** GSM8K: human 0.22, gentle 0.37, self 0.54 [0.54]. Math-story: equation-derived 0.94, gentle 0.978, self 0.635 [0.565]. The best SFT data source depends on whether the reference solutions are something the model can execute.
 - Next: math-story GRPO, RLOO, GSPO (LoRA).
 
+### 2026-11-18 11:50 · math-story-problems, GRPO (LoRA) finished: 0.565 → 0.99
+- **Setup:** same as the GSM8K RL runs (4 prompts x 4 rollouts per step, lr 2e-6, correctness-only reward, 640 new tokens, 625 steps, ~1.6 h, ~6-20 s/step, peak MLX 6.8 GB).
+| Epoch | Overall | eq | story_1 | story_2 | story_3 | Mean tokens | Truncated |
+|---|---|---|---|---|---|---|---|
+| 0 | 56% | 90% | 74% | 54% | 8% | 302 | 18% |
+| 1 | 96% | 97% | 98% | 96% | 91% | 137 | 0% |
+| 2 | 97% | 97% | 97% | 97% | 97% | 137 | 0% |
+| 3 | 98% | 97% | 98% | 98% | 99% | 147 | 0% |
+| 4 | 99% | 99% | 100% | 99% | 99% | 149 | 0% |
+| 5 | 99% | 99% | 99% | 99% | 99% | 149 | 0% |
+- **Reading:** RL reaches the top of this dataset: 0.955 after the first epoch and 0.99 at the end, every form at 97-100% including the long distractor story (8% → 99%), with no truncation. It beats the original SFT (0.94) and is at/above the gentle SFT (0.978; the gap is within noise at ~400 prompts), **without needing the equation-derived reference solutions**: the reward alone was enough. Answers shrank from ~300 to ~150 tokens (SFT: ~42).
+- **Dynamics:** reward climbed from 0.48 to ~1.0 by step ~250; from then on ~95-98% of question groups had all four answers equal (no gradient), so the later steps changed little (last-100-step mean zero-variance share 98%). Step time fell from ~20 s to ~6 s as answers shortened. I had predicted at the step-63 check that GRPO would level off well below SFT; that was wrong (the first epoch alone gave 0.955). The unrewarded "The answer is:" format again vanished after step ~250 with no effect on the score.
+- **Caveats:** n=100 per form, one seed. Test equations never appear in train; the train distribution (story forms) differs from the evaluated bare-equation form but eq reached 99%.
+- Next: math-story RLOO, GSPO (LoRA).
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
