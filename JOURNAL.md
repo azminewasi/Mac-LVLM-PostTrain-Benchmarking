@@ -248,3 +248,8 @@ Times are local and approximate where marked `~`. Run data referred to here live
 1. The planned queue is complete (see the 2026-11-18 15:10 entry). Candidate follow-ups: multiple seeds for the RL methods (differences are inside the noise), SFT-full on GSM8K and the full-fine-tuning runs on math-story, the 2B model.
 2. 2B/4B are out of scope for now (`scripts/run_queue_larger.sh` kept for later; measure the 2B before the 4B).
 3. Write a math-story report (per-form accuracy by epoch, answer length, speed) when Phase B has results; update the GSM8K report's conclusions when the methods can be compared.
+
+## 2026-11-18 (evening): cleanup
+- Deleted model weights (4.9 GB: 56 files, the per-epoch LoRA adapters and the three full fine-tuned models), local W&B caches inside `runs*/` (264 MB), top-level `logs/`, `__pycache__`, `.DS_Store` and the Hugging Face cache (33 GB: Qwen3.5 0.8B/2B/4B and the two datasets). Kept: metrics, rollouts, evaluation generations, configs, training data, reports and this journal.
+- Earlier commits on GitHub still contain the adapters (about 2 GB of git history). Purging them would need a history rewrite and force-push; not done.
+- To reproduce a run: `python train.py ...` re-downloads the model and dataset and re-trains; weights are not needed to regenerate the reports.

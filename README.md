@@ -1,5 +1,7 @@
 # Mac LLM/VLM Post-training Testing
 
+**Links:** [GitHub repo](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking) · blog posts: [Post-training Qwen3.5 on a MacBook (GSM8K)](https://azminewasi.github.io/blog/mac-post-training-gsm8k.html), [SFT vs RL on math story problems](https://azminewasi.github.io/blog/mac-post-training-math-story.html) · companion project: [Mac LLM/VLM inference benchmarking](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) ([blog post](https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html)). · reports: [`results/report.html`](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report.html), [`results/report_mathstory.html`](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report_mathstory.html)
+
 Can you actually post-train LLMs on a 16 GB MacBook? This project fine-tunes **Qwen3.5-0.8B / 2B / 4B** on an Apple M5 with
 [MLX](https://github.com/ml-explore/mlx) using **SFT** and three critic-free RL methods (**GRPO, RLOO, GSPO**), with **LoRA** on all
 models and **full fine-tuning** on the 0.8B, then measures what each setup costs and gains (accuracy, speed, memory, system load).
@@ -16,7 +18,7 @@ It is the companion of *Mac LLM/VLM Inference Testing* (same models, prompt and 
 **Goals**
 1. Find the practical limits of local post-training on 16 GB unified memory (which model/method/adapter combinations fit, how fast).
 2. Compare SFT vs GRPO vs RLOO vs GSPO and LoRA vs full fine-tuning on one verifiable task (GSM8K), one W&B line per (model, method, adapter) pair.
-3. Keep all training data, rollouts, adapters and metrics so every run can be analysed afterwards.
+3. Keep all training data, rollouts and metrics so every run can be analysed afterwards. (Model weights and adapters were deleted locally after the runs to save ~5 GB; re-run `train.py` to regenerate them.)
 
 Everything is logged to W&B with **one run per (model, method, adapter) pair**,
 named `<model>__<method>__<lora|full>` (e.g. `2B__gspo__lora`), so each pair is one line in every chart.

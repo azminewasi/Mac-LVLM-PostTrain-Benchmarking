@@ -14,10 +14,11 @@ __pycache__/
 
 # local W&B cache and smoke-test output
 wandb/
+**/wandb/
 runs_smoke/
 
-# large full-fine-tune weights (LoRA adapters are small and kept)
-runs/**/weights_*.safetensors
+# model weights and adapters (deleted after the runs; regenerate with train.py)
+*.safetensors
 
 # KEEP: data/ (training sets), runs/ (metrics, rollouts, evals, adapters, configs), results/ (comparison + analysis)
 logs/

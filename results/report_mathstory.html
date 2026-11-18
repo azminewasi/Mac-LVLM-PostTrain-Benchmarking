@@ -17,6 +17,7 @@ ul{padding-left:20px}li{margin:4px 0}.lede{font-size:17px;line-height:1.55;margi
 <p class="kicker">Mac LLM/VLM Post-training Testing · math-story-problems</p>
 <h1>Teaching a 0.8B model to ignore distractors: SFT vs RL on math story problems</h1>
 <p class="sub">November 18, 2026 · Qwen3.5-0.8B with LoRA · Apple M5 MacBook Pro, 16 GB · 6 runs</p>
+<p class="sub links"><a href="https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking">Code on GitHub</a> · <a class="selfblog" href="https://azminewasi.github.io/blog/mac-post-training-math-story.html">Blog version</a> · <a class="selfrep" href="https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report_mathstory.html">report.html source</a> · Companion: <a href="https://azminewasi.github.io/blog/mac-post-training-gsm8k.html">GSM8K post</a> · <a href="https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking">inference repo</a> · <a href="https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html">inference post</a></p>
 
 <h2 id="aim">The question</h2>
 <p class="lede">On GSM8K, the model's own reasoning was already strong, and supervised fine-tuning made it <i>worse</i>. Would the picture change on a dataset where the answers are short and the failure mode is different?</p>
@@ -82,6 +83,6 @@ ul{padding-left:20px}li{margin:4px 0}.lede{font-size:17px;line-height:1.55;margi
 <ul>
 <li><b>Data:</b> train 500 items from the 131,072-item training split (seeded; each uses one of the three story forms); evaluation on the first 100 items of the 3,072-item test split, in all four forms; greedy decoding, 512-token cap.</li>
 <li><b>Hyperparameters:</b> LoRA rank 16, scale 20; SFT lr 2e-5 (5 epochs); gentle SFT and self-distilled SFT lr 5e-6 (2 epochs); RL lr 2e-6, 4 prompts x 4 rollouts per step, temperature 1.0, up to 640 new tokens, correctness-only reward, 5 epochs; gradient checkpointing, clipping 1.0.</li>
-<li><b>W&amp;B project:</b> <code>macbook-posttrain-mathstory</code>; all rollouts, evaluation answers and adapters are kept under <code>runs_mathstory/</code>. See also the research journal (<code>JOURNAL.md</code>) and the GSM8K report.</li>
+<li><b>W&amp;B project:</b> <code>macbook-posttrain-mathstory</code>; all metrics, rollouts and evaluation answers are kept under <code>runs_mathstory/</code>; model weights were deleted locally after the runs (re-run <code>train.py</code> to regenerate). See also the research journal (<code>JOURNAL.md</code>) and the GSM8K report.</li>
 </ul>
 </main></body></html>

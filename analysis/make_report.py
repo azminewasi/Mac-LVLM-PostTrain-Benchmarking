@@ -201,20 +201,22 @@ live_txt = ("Currently running: " + ", ".join(f"{r['model']} {NAMES[r['method']]
 HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Post-training Qwen3.5 on a MacBook: what works, what breaks</title><style>{CSS}</style></head><body><main>
 <p class="kicker">Mac LLM/VLM Post-training Testing</p>
 <h1>Post-training Qwen3.5 on a 16 GB MacBook: what works, what breaks</h1>
-<p class="sub">{datetime.date.today().strftime('%B %d, %Y')} · Apple M5 MacBook Pro, 16 GB · MLX · {ndone} of {len(order)} started runs finished · work in progress</p>
+<p class="sub">{datetime.date.today().strftime('%B %d, %Y')} · Apple M5 MacBook Pro, 16 GB · MLX · {ndone} of {len(order)} runs finished · 0.8B, GSM8K</p>
+<p class="sub links"><a href="https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking">Code on GitHub</a> · <a class="selfblog" href="https://azminewasi.github.io/blog/mac-post-training-gsm8k.html">Blog version</a> · <a class="selfrep" href="https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report.html">report.html source</a> · Companion: <a href="https://azminewasi.github.io/blog/mac-post-training-math-story.html">math-story post</a> · <a href="https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking">inference repo</a> · <a href="https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html">inference post</a></p>
 
 <h2 id="aim">The question</h2>
 <p class="lede">Our companion post measured how far a 16 GB MacBook goes at <i>running</i> Qwen3.5. This one asks the harder question: how far does it go at <i>training</i> it?</p>
 <p>Running a model streams weights through the chip once per token. Training does that and more: it keeps activations for the backward pass, gradients, optimizer state, and for reinforcement learning (RL) it also has to generate whole batches of answers before it can learn from them. On a laptop where macOS alone takes about {BASE_GB:.1f} GB of the 16, each of those costs matters.</p>
-<p>We set out to compare four post-training methods on the same task: <b>SFT</b> (imitate reference solutions), and three critic-free RL methods, <b>GRPO</b>, <b>RLOO</b> and <b>GSPO</b> (learn from the model's own answers, rewarded when correct). Each is tried with LoRA adapters on the 0.8B, 2B and 4B models, and with full fine-tuning on the 0.8B. The task is GSM8K grade-school math: 500 training questions for 5 epochs, scored on 100 held-out test questions, with one line per (model, method, adapter) in Weights &amp; Biases and every rollout kept.</p>
-<p>This is a work-in-progress report: it regenerates from whatever has finished. {live_txt} What it already contains is a good deal of what <i>broke</i> on the way, which turned out to be the most informative part.</p>
+<p>We set out to compare four post-training methods on the same task: <b>SFT</b> (imitate reference solutions), and three critic-free RL methods, <b>GRPO</b>, <b>RLOO</b> and <b>GSPO</b> (learn from the model's own answers, rewarded when correct). All on the Qwen3.5-0.8B, with LoRA adapters and (for the RL methods) with full fine-tuning; we also tried two gentler SFT recipes after the first one failed. The task is GSM8K grade-school math: 500 training questions for 5 epochs, scored on 100 held-out test questions, with one line per (model, method, adapter) in Weights &amp; Biases and every rollout kept.</p>
+<p>All planned runs have finished. A good deal of what <i>broke</i> on the way turned out to be the most informative part, so this post tells that story as well as the final scores. The larger models (2B, 4B) were planned but not trained: see the memory chapter for why we expect them not to fit as configured. A companion post repeats the experiment on a dataset with much shorter answers.</p>
 
-<h3>The short version so far</h3>
+<h3>The short version</h3>
 <ul class="toc">
 <li><b>Memory is the first wall, and it comes much sooner than for inference.</b> A single 0.8B training step peaked at {max((x['peak_gb'] for x in mp), default=0):.1f} GB before we turned on gradient checkpointing, and {min((x['peak_gb'] for x in mp if x['grad_checkpointing']), default=0):.1f} GB after.</li>
 <li><b>Training required re-implementing a layer.</b> Qwen3.5's fast attention kernel has no gradient; the library fallback was 50x too slow.</li>
 <li><b>Three separate hyperparameter and reward mistakes each wrecked a run</b>, and each looked like "the method doesn't work" until we read the curves.</li>
-<li><b>SFT on 500 human solutions makes this model <i>worse</i>.</b> {sft_txt.split('. ')[0] if sft and sft['done'] else 'Result pending.'}.</li>
+<li><b>SFT on 500 human solutions makes this model <i>worse</i>.</b> {sft_txt.split('. ')[0] if sft and sft['done'] else 'Result pending.'}. A gentler recipe lost less (37%), and training on the model's own correct answers kept it at its starting 54% but taught nothing new.</li>
+<li><b>RL is what improved it.</b> With LoRA, GRPO, RLOO and GSPO ended at 64%, 67% and 59% (from 54%); with full fine-tuning 68%, 68% and 70%. On 100 test questions the differences between the RL methods are within noise; the gap to SFT is not.</li>
 </ul>
 
 <h2 id="setup">1. The setup, in plain words</h2>
@@ -225,7 +227,7 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <li><b>GSPO</b>: like GRPO, but the update is weighted at the whole-sequence level instead of per token.</li>
 <li><b>LoRA</b> trains small adapter matrices (10.8M parameters on the 0.8B) on top of frozen weights; <b>full fine-tuning</b> updates every transformer weight and needs fp32 master weights and Adam state (about 14 bytes per parameter).</li>
 </ul>
-<p>All RL methods here are critic-free and have no reference-model KL penalty, so only one model sits in memory. Each RL step uses 4 prompts x 4 rollouts at temperature 1.0 and up to 640 new tokens. The learning rates are 2e-5 (SFT, LoRA), 1e-5 (SFT, full), 2e-6 (RL, LoRA) and 1e-6 (RL, full). The 0.8B runs use the full 500 samples x 5 epochs; the 2B and 4B use LoRA for 1 epoch to fit the time budget.</p>
+<p>All RL methods here are critic-free and have no reference-model KL penalty, so only one model sits in memory. Each RL step uses 4 prompts x 4 rollouts at temperature 1.0 and up to 640 new tokens. The learning rates are 2e-5 (SFT, LoRA), 1e-5 (SFT, full), 2e-6 (RL, LoRA) and 1e-6 (RL, full). All runs use the full 500 samples x 5 epochs on the 0.8B. The gentler SFT variants use 5e-6 for 2 epochs ("SFT gentle") and rejection-sampled, self-generated correct answers ("SFT self-distilled"). Full-fine-tuning SFT was not completed.</p>
 
 <h2 id="broke">2. The first thing that broke: no gradients through Qwen3.5</h2>
 <p class="lede">Qwen3.5 is not a plain transformer. Most of its layers are "gated delta" linear-attention layers, and MLX ships a fast Metal kernel for them that has no backward pass.</p>
@@ -260,16 +262,16 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 
 <h2 id="memory">6. Memory: the wall comes sooner</h2>
 <p class="lede">A training step that peaked at almost 16 GB on a model with 1.6 GB of weights.</p>
-<p>While the second GRPO attempt was running, system swap climbed to 5 GB and step times swung between 11 and 46 seconds. Profiling one forward and backward pass explained it: without gradient checkpointing, the activations of the 0.8B for a batch of two 800-token sequences needed almost the entire 16 GB. Turning on checkpointing (recomputing activations in the backward pass) cut that to {min((x['peak_gb'] for x in mp if x['grad_checkpointing'] and x['batch']==2), default=0):.1f} GB at the cost of some speed, and the restarted GRPO run peaks at {grpo_peak} so far.</p>
+<p>While the second GRPO attempt was running, system swap climbed to 5 GB and step times swung between 11 and 46 seconds. Profiling one forward and backward pass explained it: without gradient checkpointing, the activations of the 0.8B for a batch of two 800-token sequences needed almost the entire 16 GB. Turning on checkpointing (recomputing activations in the backward pass) cut that to {min((x['peak_gb'] for x in mp if x['grad_checkpointing'] and x['batch']==2), default=0):.1f} GB at the cost of some speed, and the restarted GRPO run peaked at {grpo_peak}.</p>
 <div class="fig"><div class="cap">Peak MLX memory of one LoRA training step on the 0.8B (<code>tests/profile_memory.py</code>). Batch size and gradient checkpointing change it by 2-3x.</div>{c_prof}</div>
-<p>This is the number to carry to the larger models, and it is not reassuring. Even with checkpointing, the 0.8B needs about 5 GB of working memory on top of its 1.6 GB of weights. The 4B has 8.5 GB of weights and bigger activations, so as configured it very likely does <b>not</b> fit in the ≈{USABLE:.1f} GB we have: it would need a micro-batch of 1, shorter sequences, or a more memory-efficient backward pass for the gated-delta layers. We will measure the 2B first and decide whether the 4B runs are feasible before spending days on them.</p>
-{fig("Peak MLX memory, system RAM and swap per run so far, against the 16 GB limit.", c_mem)}
+<p>This is the number to carry to the larger models, and it is not reassuring. Even with checkpointing, the 0.8B needs about 5 GB of working memory on top of its 1.6 GB of weights. The 4B has 8.5 GB of weights and bigger activations, so as configured it very likely does <b>not</b> fit in the ≈{USABLE:.1f} GB we have: it would need a micro-batch of 1, shorter sequences, or a more memory-efficient backward pass for the gated-delta layers. We therefore did not train the 2B or 4B: with RL at roughly 3 hours per 0.8B run, the time cost alone would have been days per run, on top of the memory risk.</p>
+{fig("Peak MLX memory, system RAM and swap per run, against the 16 GB limit.", c_mem)}
 
 <h2 id="speed">7. What a run costs in time</h2>
 <p class="lede">SFT is cheap; RL is generation-bound and slow.</p>
-<p>An SFT step (4 sequences) takes about a second, so five epochs of 500 questions finish in roughly 15 minutes. An RL step must first generate 16 answers of up to 640 tokens at decode speeds of a few hundred tokens/s, then train on them: 15-45 seconds on the 0.8B. A 625-step RL run is therefore several hours, and the 2B and 4B are roughly 2.5x and 5x slower still, which is why those use one epoch.</p>
+<p>An SFT step (4 sequences) takes about a second, so five epochs of 500 questions finish in roughly 15 minutes. An RL step must first generate 16 answers of up to 640 tokens at decode speeds of a few hundred tokens/s, then train on them: 15-45 seconds on the 0.8B. A 625-step RL run took roughly 3-4 hours with LoRA and about 3 hours with full fine-tuning on the 0.8B; larger models would be several times slower.</p>
 {fig("Mean seconds per optimizer step (SFT: 4 sequences; RL: 4 prompts x 4 rollouts).", c_step)}
-{fig("Wall-clock hours used per run so far.", c_time)}
+{fig("Wall-clock hours per run.", c_time)}
 
 <h2 id="capability">8. So what can this MacBook train?</h2>
 <p class="lede">Small models, comfortably, with LoRA; the full fine-tune of even the smallest model is a stretch.</p>
@@ -283,19 +285,20 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <h3>What fits (estimates)</h3>{T_est}
 <p class="dim">Estimates are weights plus optimizer state and a 0.5 GB allowance; activations come on top and, as chapter 5 shows, can dominate. Treat "fits" as "should fit with small batches and checkpointing".</p>
 
-<h2 id="conclusions">9. Conclusions so far</h2>
+<h2 id="conclusions">9. Conclusions</h2>
 <ol>
 <li><b>A 16 GB MacBook can post-train small Qwen3.5 models, but you must budget for activations, not just weights.</b> Gradient checkpointing changed a 15.8 GB step into a 6.9 GB one.</li>
 <li><b>Check backward support layer by layer.</b> Qwen3.5's hybrid architecture needed a custom differentiable kernel before anything trained.</li>
-<li><b>SFT on a small human-written set hurt a model that already reasons well.</b> More data or a gentler recipe would be needed for it to help.</li>
+<li><b>SFT on a small human-written set hurt a model that already reasons well.</b> A gentler recipe lost less, and self-distillation preserved the starting accuracy, but neither improved it: SFT only helps when the reference solutions are better than what the model already produces.</li>
 <li><b>RL needs a careful reward and a small learning rate.</b> Reward that can be earned without being correct will be found within 50 steps; watch reward and length together.</li>
 <li><b>Unrewarded behaviour drifts.</b> After we stopped rewarding the "The answer is:" format, the share of answers using it fell from ~0.8 to ~0.13 without hurting the score. Track style, not just accuracy.</li>
-<li><b>Time scales brutally with model size for RL.</b> Plan for hours per run on the 0.8B and days for the larger models.</li>
+<li><b>RL beat SFT here, at a price.</b> The three RL methods improved the 0.8B (59-70% vs 54% untrained), and full fine-tuning fit in memory with a micro-batch of 1, but RL took hours where SFT took minutes. RL also shortened answers a lot (to roughly 75-220 tokens).</li>
+<li><b>Time scales brutally with model size for RL.</b> Plan for about 3 hours per 0.8B run; larger models would take days.</li>
 </ol>
 <h3>What we did not measure, and caveats</h3>
 <p>Test accuracy is on 100 questions (about ±10 points) with one seed per setup; learning rates were corrected after the failures above rather than swept, so the method comparison is not a tuned head-to-head; power draw and batteries are untested.</p>
 <h3>What is next</h3>
-<p>The queue continues: the remaining 0.8B setups (RLOO, GSPO, then the full fine-tuning variants), then SFT and the three RL methods with LoRA on the 2B and 4B at one epoch. This page will fill in the comparison between methods as they finish; the final write-up will update the conclusions above. The inference-side companion post covers running these same models.</p>
+<p>Multiple seeds and a larger test set would tighten the method comparison; SFT with full fine-tuning and the 2B model are the obvious missing runs. The inference-side companion post covers running these same models.</p>
 
 <h2 id="appendix">Appendix</h2>
 <h3>A. Results table</h3>{T_res}
@@ -304,7 +307,7 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <ul>
 <li><b>Data:</b> 500 GSM8K train questions (seeded subset saved with each run); evaluation on the first 100 test questions, greedy, thinking off, 512-token cap.</li>
 <li><b>Hyperparameters:</b> LoRA rank 16, scale 20, no dropout; gradient clipping 1.0; gradient checkpointing on for all runs except the first SFT run (0.8B LoRA), which finished before checkpointing was enabled for the 0.8B (it only changes memory and speed, not the maths); seed fixed.</li>
-<li><b>Everything is kept:</b> per-run metrics, rollouts, evaluation generations and adapters under <code>runs/</code>, the discarded attempts under <code>runs_discarded/</code>; W&amp;B project <code>macbook-posttrain</code> has one line per (model, method, adapter).</li>
+<li><b>Everything is kept:</b> per-run metrics, rollouts and evaluation generations under <code>runs/</code> (model weights were deleted locally after the runs; re-run <code>train.py</code> to regenerate them), the discarded attempts under <code>runs_discarded/</code>; W&amp;B project <code>macbook-posttrain</code> has one line per (model, method, adapter).</li>
 <li>Regenerate this page with <code>python analysis/make_report.py</code>.</li>
 </ul>
 </main></body></html>"""
