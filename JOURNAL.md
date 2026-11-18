@@ -143,6 +143,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Fix (`pt/common.py`):** generate in chunks of 16 questions (64 prompts) and `mx.clear_cache()` between chunks; progress is printed every 5 chunks.
 - **Queue effect:** the queue logged `FAILED` and moved on to the math-story phase (SFT first). The GSM8K `sftself` was re-launched by hand in parallel (SFT is light on memory; swap stayed ~1.8 GB) with log `logs/sftself_gsm8k.log`; the math-story `sftself` later in the queue will use the fixed code.
 
+### 2026-11-18 08:00 · My mistake: running two jobs at once caused a GPU out-of-memory failure; queue restarted
+- **What happened:** I started the fixed GSM8K `sftself` by hand while the queue was running the math-story SFT run. The math-story run died in its baseline evaluation with `Insufficient Memory (kIOGPUCommandBufferCallbackErrorOutOfMemory)`; the next queued run (`sftgentle`, math-story) began and was in the same danger.
+- **Cause (confirmed by timing):** two processes sharing the GPU (sampling 64 answers x 640 tokens + a 400-prompt evaluation) exceeded the GPU's working-memory limit. Earlier concurrent runs had been fine only because they were small.
+- **Lesson:** never run two model jobs concurrently on this machine, even "light" ones; the memory limit is per-GPU, not per-process.
+- **Action:** killed both, removed the partial run directories (the failed attempts' W&B runs are tagged `discarded` + `oom-concurrent`), and restarted `scripts/run_queue.sh` (log `logs/queue7.log`). It skipped everything finished and is running GSM8K `sftself` (chunk-fixed code) first, then the math-story set (sft, sftgentle, sftself, grpo, rloo, gspo), strictly one at a time.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
