@@ -22,3 +22,6 @@ runs_smoke/
 
 # KEEP: data/ (training sets), runs/ (metrics, rollouts, evals, adapters, configs), results/ (comparison + analysis)
 logs/
+
+# vision experiment: downloaded parquet shards and resized images (regenerable from the Hub)
+data/spatial_images/

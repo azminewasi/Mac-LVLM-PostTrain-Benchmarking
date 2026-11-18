@@ -21,6 +21,9 @@ def group_advantages(rewards, G, method):
         adv = (r - mean) / (r.std(1, keepdims=True) + 1e-4)
     return adv.reshape(-1)
 
+# Optional hook for vision-language training: EXTRA['fn'](input_ids) -> kwargs for the inner LM (inputs_embeds with image features, position_ids).
+EXTRA = {}
+
 def _head(model):
     lm = getattr(model, "language_model", model)
     inner = lm.model
@@ -35,7 +38,7 @@ def token_logprobs(model, ids, plens, tlens):
     inputs, targets = ids[:, :-1], ids[:, 1:]
     s = max(0, int(mx.min(plens).item()) - 1)
     inner, head = _head(model)
-    h = inner(inputs)[:, s:]
+    h = inner(inputs, **(EXTRA['fn'](inputs) if EXTRA.get('fn') else {}))[:, s:]
     logits = head(h).astype(mx.float32)
     tgt = targets[:, s:]
     lp = mx.take_along_axis(logits, tgt[..., None], axis=-1).squeeze(-1) - mx.logsumexp(logits, axis=-1)
