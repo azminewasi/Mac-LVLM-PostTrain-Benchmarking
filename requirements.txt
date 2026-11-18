@@ -2,8 +2,5 @@ mlx-lm>=0.32
 mlx>=0.32
 wandb>=0.31
 datasets
-huggingface_hub
 psutil
 numpy
-pandas
-matplotlib

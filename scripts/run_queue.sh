@@ -6,7 +6,7 @@
 #       2. the SFT fixes with LoRA: sftgentle (human solutions, lr 5e-6, 2 epochs) and sftself (the model's own correct answers).
 #   Phase B (math-story-problems, project macbook-posttrain-mathstory, runs_mathstory/), LoRA only:
 #       sft, sftgentle, sftself, grpo, rloo, gspo.   500 train samples; 5 epochs (2 for the gentle SFT variants).
-# 2B/4B runs are in scripts/run_queue_larger.sh and are NOT part of this queue.
+# (2B/4B were not run.)
 #   ./run_queue.sh                    start now
 #   ./run_queue.sh --wait-pid PID     wait for that process (e.g. a run already in progress) to exit first
 cd "$(dirname "$0")/.." || exit 1

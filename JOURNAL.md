@@ -4,15 +4,15 @@ A running, dated log of experiments, surprises, decisions and open questions. Ne
 Each entry: **what we tried → what happened → why we think so (and how sure we are) → what we decided**.
 Times are local and approximate where marked `~`. Run data referred to here lives in `runs/` (kept) and `runs_discarded/` (failed attempts, kept as evidence); the W&B project is `macbook-posttrain` (failed attempts are in group `discarded`).
 
-## Standing questions
-| # | Question | Status |
+## Standing questions (answers as of 2026-11-18; all one seed, n=100 GSM8K / n=400 math-story)
+| # | Question | Answer |
 |---|---|---|
-| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on a 0.8B model, with LoRA vs full fine-tuning? | LoRA arm answered, within noise: SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59 (baseline 0.54): the three RL methods are indistinguishable and all beat SFT; full fine-tuning not run |
-| Q2 | Do the 2B and 4B fit in 16 GB for training? | open; 4B likely does not fit as configured (see 2026-11-17 ~11:00) |
-| Q3 | Does GRPO's drop in "The answer is:" format hurt anything downstream? | open; no effect on the scored accuracy so far |
-| Q4 | Would SFT help with more data or a lower learning rate? | untested (we ran one recipe) |
-| Q7 | Does SFT stop hurting with (a) a gentle recipe on human solutions, or (b) self-distillation on the model's own correct answers? | answered (one seed, n=100): (a) partly: 0.37 vs 0.22 (baseline 0.54); (b) yes: 0.54, no drop |
-| Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which question forms (eq / story_1 / story_2 / story_3) improve? | open: code ready and smoke-tested, runs not started |
+| Q1 | Which of SFT / GRPO / RLOO / GSPO improves GSM8K accuracy most on the 0.8B, LoRA vs full? | RL, not SFT. Untrained 0.54. LoRA: SFT 0.22, GRPO 0.64, RLOO 0.67, GSPO 0.59. Full: GRPO 0.68, RLOO 0.68, GSPO 0.70. The RL methods are indistinguishable at n=100; SFT-full was not completed |
+| Q2 | Do the 2B and 4B fit in 16 GB for training? | Not tested (not run). The 0.8B needed ~6.8 GB (LoRA, checkpointing) and ~11 GB (full) at peak, so the 4B very likely does not fit as configured |
+| Q3 | Does the drop in "The answer is:" format hurt anything downstream? | Not for the score (the scorer reads the last number); it would for a pipeline that parses the format |
+| Q4 | Would SFT help with a lower learning rate or other targets? | See Q7 |
+| Q6 | On short-answer arithmetic (math-story-problems) do the same methods help, and which forms improve? | Yes, all of them: untrained 0.565 (eq 90 / story_1 74 / story_2 54 / story_3 8); SFT 0.94, gentle 0.978, self-distilled 0.635, GRPO 0.99, RLOO 0.98, GSPO 0.99; the long-story form went 8% to ~99% |
+| Q7 | Does SFT stop hurting with (a) a gentle recipe, or (b) self-distillation? | (a) partly on GSM8K (0.37 vs 0.22, baseline 0.54) and fully on math-story (0.978); (b) no drop (0.54) but no gain either |
 
 ## Log
 
@@ -83,8 +83,8 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Design (decided with the user):** train on 500 items, each using one random story form (1/3 each); evaluate 100 test items in **all four forms** (400 prompts) and log accuracy per form (`eval/acc_eq`, `eval/acc_story_1|2|3`) plus overall; 5 epochs, same hyperparameters, same eight setups as GSM8K (4 methods x LoRA/full).
 - **No reference solutions exist** (only the final answer), so SFT targets are generated deterministically from the equation: `2385 + 761 = 3146 / 3146 - 1063 = 2083 / The answer is: 2083` (verified against the dataset answer; note it shows the arithmetic but not the story-to-equation step). This makes SFT here a different recipe from GSM8K SFT (human solutions), so cross-dataset SFT comparisons need that caveat.
 - **Code:** `--dataset mathstory` in `train.py`; separate output dir `runs_mathstory/`. A 2-run smoke test passed (SFT and GRPO, per-form metrics logged). In that tiny test the untrained model got eq 100% / story_1 75% / story_2 0% / story_3 0% (n=4 each: anecdotal only).
-- **Queue:** `scripts/run_queue.sh` now runs Phase A (rest of the GSM8K 0.8B set) then Phase B (math-story); 2B/4B moved to the optional `scripts/run_queue_larger.sh`. Config metadata fix: the stored `reward` description now says "correct only" (earlier runs' configs still carry the stale "+0.1 format" text; the reward actually used was correctness-only since the GRPO v2 fix).
-- **Expectation (hypothesis, untested):** shorter answers mean much faster RL steps (generation dominates), so Phase B should cost far less wall-clock than Phase A; the distractor forms (story_2/3) should be the hard ones.
+- **Queue:** `scripts/run_queue.sh` now runs Phase A (rest of the GSM8K 0.8B set) then Phase B (math-story); 2B/4B dropped from the queue. Config metadata fix: the stored `reward` description now says "correct only" (earlier runs' configs still carry the stale "+0.1 format" text; the reward actually used was correctness-only since the GRPO v2 fix).
+- **Expectation (hypothesis, untested):** shorter answers mean much faster RL steps (generation dominates), so Phase B should cost far less wall-clock than Phase A; the distractor forms (story_2/3) should be the hard ones. **Outcome:** confirmed: math-story RL took 1.1-2.3 h per run vs 2.8-3.8 h on GSM8K, and the untrained model scored 54% / 8% on story_2 / story_3 vs 90% on bare equations.
 
 ### 2026-11-17 17:55 · RLOO-LoRA (0.8B) finished: +13 points
 - Greedy test accuracy 0.54 (baseline) → 0.48 → 0.57 → 0.66 → 0.60 → **0.67**; truncation 14% → 6% → 6% → 17% → 17% → 12%. About 3.4 h; ~16-28 s/step.
@@ -102,7 +102,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - The laptop had been shut down; on restart swap was 0 and memory 78% free. The post-train repo now has a GitHub remote (`azminewasi/post-train-testing`, in sync); the inference repo was also pushed by the user.
 - `scripts/run_queue.sh` resumed (finished runs skipped): SFT-full first.
 - **Measured (first 17 steps of SFT-full):** peak MLX memory **11.1 GB**, system RAM up to 13.8 GB, swap 3.4-3.5 GB of 4 GB (nearly exhausted), ~2.4 s/step. Trainable parameters 498M of 752M (all transformer blocks; embeddings frozen), lr 1e-5, gradient checkpointing on. This matches the earlier estimate (fp32 master weights + two Adam moments + bf16 weights ≈ 14 bytes/param).
-- **Risk (hypothesis):** the RL full runs add rollout generation and activations on top of ~11 GB, so they may not fit in the ≈9.5 GB usable (16 GB minus ≈6.5 GB for macOS), i.e. swap exhaustion or thrash. **Mitigation tried:** `--micro-bs 1` for all RL full runs (queue script updated, swapped in without interrupting the SFT-full process). If GRPO-full thrashes or fails, "does not fit on 16 GB" is itself the result; record the measured peak and swap.
+- **Risk (hypothesis):** the RL full runs add rollout generation and activations on top of ~11 GB, so they may not fit in the ≈9.5 GB usable (16 GB minus ≈6.5 GB for macOS), i.e. swap exhaustion or thrash. **Mitigation tried:** `--micro-bs 1` for all RL full runs (queue script updated, swapped in without interrupting the SFT-full process). If GRPO-full thrashes or fails, "does not fit on 16 GB" is itself the result; record the measured peak and swap. **Outcome:** all three full RL runs completed with `--micro-bs 1` (peak 11.1 GB, 2.8-3.0 h each).
 
 ### 2026-11-17 ~22:45 · Full fine-tuning thrashes; SFT fixes built; new queue order
 - **SFT-full (0.8B) was already thrashing.** First ~25 steps ran at ~2.4 s/step (peak MLX 11.1 GB), then step time jumped to 15-27 s, GPU utilisation fell from ~90% to 33-45% and the swap file grew from 4 to 5 GB. Cause (consistent with the numbers): weights + fp32 master copy + Adam state ≈ 11 GB plus ≈6.5 GB for macOS exceeds 16 GB. **Decision:** stopped it at ~step 45/625 (it would have taken 3-4 h and blocked everything else); run kept in `runs_discarded/0.8B__sft__full__infeasible-thrash` and tagged `discarded, infeasible-thrash` in W&B.
@@ -223,7 +223,12 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Result:** greedy test accuracy 0.565 → 95.0% → 97.2% → 99.0% → 99.2% → **99.2%** (all four forms 99-100% at the end; long story 8% → 99%); mean answer length 302 → 223 tokens (GRPO ~149, RLOO ~73), no truncation; ~2.3 h (step time ~20 s early, ~7-12 s late). GSPO shortened its answers least of the three RL methods, which is why its steps stayed slower.
 - **Math-story summary (final test accuracy, baseline 0.565, 400 prompts, one seed):** SFT equation solutions 0.94; `sftgentle` 0.978; `sftself` 0.635; GRPO 0.99; RLOO 0.98 (peak 1.000 at epoch 2); GSPO 0.992. Among the RL methods and `sftgentle` the differences are not meaningful near the ceiling.
 - **All planned runs are done.** The queue printed `QUEUE_DONE` at ~15:11 and regenerated both reports (`results/report.html`, `results/report_mathstory.html`). The 20-minute health-check job was cancelled.
-- **Not done / open:** 2B and 4B runs (`scripts/run_queue_larger.sh`, 4B unlikely to fit); SFT-full on GSM8K (stopped early, may have thrashed only transiently); SFT-full and full-RL on math-story; multiple seeds; the model/data caches have not been cleaned up yet.
+- **Not done / open:** 2B and 4B runs (4B unlikely to fit); SFT-full on GSM8K (stopped early, may have thrashed only transiently); SFT-full and full-RL on math-story; multiple seeds.
+
+### 2026-11-18 (evening) · Cleanup
+- Deleted model weights (4.9 GB: 56 files, the per-epoch LoRA adapters and the three full fine-tuned models), local W&B caches inside `runs*/` (264 MB), top-level `logs/`, `__pycache__`, `.DS_Store` and the Hugging Face cache (33 GB: Qwen3.5 0.8B/2B/4B and the two datasets). Kept: metrics, rollouts, evaluation generations, configs, training data, reports and this journal.
+- Earlier commits on GitHub still contain the adapters (about 2 GB of git history). Purging them would need a history rewrite and force-push; not done.
+- To reproduce a run: `python train.py ...` re-downloads the model and dataset and re-trains; weights are not needed to regenerate the reports.
 
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
@@ -244,12 +249,7 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - Failed attempts were kept deliberately; they explain the final settings.
 - Learning rates were corrected after failures, not swept, so cross-method comparisons are not tuned head-to-heads.
 
-## Next
-1. The planned queue is complete (see the 2026-11-18 15:10 entry). Candidate follow-ups: multiple seeds for the RL methods (differences are inside the noise), SFT-full on GSM8K and the full-fine-tuning runs on math-story, the 2B model.
-2. 2B/4B are out of scope for now (`scripts/run_queue_larger.sh` kept for later; measure the 2B before the 4B).
-3. Write a math-story report (per-form accuracy by epoch, answer length, speed) when Phase B has results; update the GSM8K report's conclusions when the methods can be compared.
-
-## 2026-11-18 (evening): cleanup
-- Deleted model weights (4.9 GB: 56 files, the per-epoch LoRA adapters and the three full fine-tuned models), local W&B caches inside `runs*/` (264 MB), top-level `logs/`, `__pycache__`, `.DS_Store` and the Hugging Face cache (33 GB: Qwen3.5 0.8B/2B/4B and the two datasets). Kept: metrics, rollouts, evaluation generations, configs, training data, reports and this journal.
-- Earlier commits on GitHub still contain the adapters (about 2 GB of git history). Purging them would need a history rewrite and force-push; not done.
-- To reproduce a run: `python train.py ...` re-downloads the model and dataset and re-trains; weights are not needed to regenerate the reports.
+## Next (possible follow-ups, none planned)
+1. Multiple seeds for the RL methods (differences are inside the noise) and a larger test set.
+2. SFT-full on GSM8K and full fine-tuning on math-story.
+3. The 2B model with LoRA (measure memory first); the 4B very likely needs a 4-bit base.

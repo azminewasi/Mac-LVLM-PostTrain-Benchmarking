@@ -1,74 +1,57 @@
-# Mac LLM/VLM Post-training Testing
+# Mac LLM/VLM Post-training Benchmarking
 
-**Links:** [GitHub repo](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking) · blog posts: [Post-training Qwen3.5 on a MacBook (GSM8K)](https://azminewasi.github.io/blog/mac-post-training-gsm8k.html), [SFT vs RL on math story problems](https://azminewasi.github.io/blog/mac-post-training-math-story.html) · companion project: [Mac LLM/VLM inference benchmarking](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) ([blog post](https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html)). · reports: [`results/report.html`](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report.html), [`results/report_mathstory.html`](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking/blob/main/results/report_mathstory.html)
+Can you post-train an LLM on a 16 GB MacBook? This project fine-tunes **Qwen3.5-0.8B** on an Apple M5 with [MLX](https://github.com/ml-explore/mlx)
+using **SFT** and three critic-free RL methods (**GRPO, RLOO, GSPO**), with **LoRA** and with **full fine-tuning**, on two verifiable tasks
+(GSM8K and a short-answer math-story dataset), and measures what each setup costs and gains (accuracy, speed, memory, system load, answer style).
+Companion of [MacBook-Pro-LLM-VLM-Inference-Benchmarking](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) (same prompt and eval set, so base-model numbers carry over).
 
-Can you actually post-train LLMs on a 16 GB MacBook? This project fine-tunes **Qwen3.5-0.8B / 2B / 4B** on an Apple M5 with
-[MLX](https://github.com/ml-explore/mlx) using **SFT** and three critic-free RL methods (**GRPO, RLOO, GSPO**), with **LoRA** on all
-models and **full fine-tuning** on the 0.8B, then measures what each setup costs and gains (accuracy, speed, memory, system load).
-It is the companion of *Mac LLM/VLM Inference Testing* (same models, prompt and eval set, so base-model numbers carry over).
+**Links:** [GitHub repo](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking) · blog posts: [GSM8K](https://azminewasi.github.io/blog/mac-post-training-gsm8k.html), [math-story](https://azminewasi.github.io/blog/mac-post-training-math-story.html) · companion: [inference repo](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) and [blog post](https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html) · reports: [`results/report.html`](results/report.html), [`results/report_mathstory.html`](results/report_mathstory.html) · research log: [`JOURNAL.md`](JOURNAL.md)
 
-**Status (2026-11-18):** the planned runs are complete. GSM8K (0.8B, untrained 0.54): LoRA SFT 0.22 / gentle 0.37 / self-distilled 0.54, LoRA GRPO 0.64 / RLOO 0.67 / GSPO 0.59, full fine-tuning GRPO 0.68 / RLOO 0.68 / GSPO 0.70. Math-story-problems (untrained 0.565): SFT 0.94 / gentle 0.978 / self-distilled 0.635, GRPO 0.99 / RLOO 0.98 / GSPO 0.99. One seed, 100 (GSM8K) or 400 (math-story) test prompts: small differences are not meaningful. Not run: 2B/4B, SFT-full on GSM8K, full fine-tuning on math-story.
+## Results (0.8B, final-epoch test accuracy, one seed)
+| | untrained | SFT | SFT gentle | SFT self-distilled | GRPO | RLOO | GSPO |
+|---|---|---|---|---|---|---|---|
+| GSM8K, LoRA (n=100) | 0.54 | 0.22 | 0.37 | 0.54 | 0.64 | 0.67 | 0.59 |
+| GSM8K, full fine-tuning | 0.54 | not run | not run | not run | 0.68 | 0.68 | 0.70 |
+| math-story, LoRA (n=400) | 0.565 | 0.94 | 0.978 | 0.635 | 0.99 | 0.98 | 0.99 |
 
-**Datasets:** GSM8K (500 train / first 100 test) and, second, [`azminetoushikwasi/math-story-problems`](https://huggingface.co/datasets/azminetoushikwasi/math-story-problems) (short-answer arithmetic in four forms; `--dataset mathstory`, W&B project `macbook-posttrain-mathstory`, runs in `runs_mathstory/`). The default queue runs the eight 0.8B setups on each; 2B/4B live in `scripts/run_queue_larger.sh`.
-
-**Math-story report:** `results/report_mathstory.html` (blog-style: where the untrained model fails, SFT vs RL, GSM8K vs math-story).
-
-**Reports:** the blog-style write-up is generated at `results/report.html` (`python report.py`, regenerates from `runs/`), and **[`JOURNAL.md`](JOURNAL.md)** is the running research journal: what we tried, what happened, why, and what is still open (including the failed attempts, kept in `runs_discarded/`).
-
-**Goals**
-1. Find the practical limits of local post-training on 16 GB unified memory (which model/method/adapter combinations fit, how fast).
-2. Compare SFT vs GRPO vs RLOO vs GSPO and LoRA vs full fine-tuning on one verifiable task (GSM8K), one W&B line per (model, method, adapter) pair.
-3. Keep all training data, rollouts and metrics so every run can be analysed afterwards. (Model weights and adapters were deleted locally after the runs to save ~5 GB; re-run `train.py` to regenerate them.)
-
-Everything is logged to W&B with **one run per (model, method, adapter) pair**,
-named `<model>__<method>__<lora|full>` (e.g. `2B__gspo__lora`), so each pair is one line in every chart.
-
-**Status: code written and unit-tested on a stub model (CPU); not yet run on real weights.** Run `scripts/smoke_test.sh` first. It is queued behind the inference benchmark, which must finish first so measurements are not disturbed.
+With 100 (GSM8K) or 400 (math-story) test prompts and one seed, small differences are noise (about ±10 points on GSM8K). What the data does support:
+- SFT on human GSM8K solutions made the model *worse*; RL on its own answers improved it. On math-story, SFT on executable (equation-derived) solutions works.
+- All three RL methods are indistinguishable; they also shorten the answers a lot, and silently drop formats nobody rewards.
+- Memory is the first wall: a LoRA step peaked at 15.8 GB until gradient checkpointing (6.9 GB); full fine-tuning peaked at ~11 GB. RL runs took ~3 h each on GSM8K, 1-2 h on math-story.
+- Not run: 2B/4B, SFT-full on GSM8K, full fine-tuning on math-story.
 
 ## Setup
-Task: GSM8K. Train = 500 random train samples (seed 0, saved to `data/train_gsm8k_n500_seed0.jsonl`), 5 epochs.
-Eval = the same first-100 GSM8K test samples, prompt and scoring as `../inference-testing/bench.py` (thinking off,
-greedy), measured before training (epoch 0) and after every epoch -> directly comparable with the inference benchmark.
+- **Data:** GSM8K (500 random train questions, seed 0, saved in `data/`; the first 100 test questions, same prompt and scoring as the inference repo: greedy, thinking off, 512-token cap) and [`azminetoushikwasi/math-story-problems`](https://huggingface.co/datasets/azminetoushikwasi/math-story-problems) (500 train items in mixed story forms; test = 100 items in all four forms, 400 prompts). 5 epochs (2 for the gentle SFT variants).
+- **Methods:** `sft` (reference solutions, lr 2e-5 LoRA / 1e-5 full); `sftgentle` (lr 5e-6, 2 epochs); `sftself` (rejection-sampled, the model's own correct answers); `grpo`, `rloo`, `gspo` (4 prompts x 4 rollouts per step, temperature 1.0, up to 640 new tokens, lr 2e-6 LoRA / 1e-6 full, no KL, no critic).
+- **Reward (RL):** 1 if the answer finished and is correct, else 0. Format is logged, not rewarded (a format bonus plus truncation was reward-hacked in the first attempt, see the journal).
+- **LoRA:** rank 16, scale 20, all linear layers. **Full fine-tuning:** all transformer blocks (embeddings frozen) with an fp32-master-weight AdamW (~14 bytes/param). Gradient checkpointing on.
+- **Qwen3.5's gated-delta layers have no backward kernel in MLX**, so `pt/gdn.py` implements a chunk-parallel differentiable version (checked against the library reference in `tests/test_gdn.py`).
+- Text-only: the vision tower is not loaded.
 
-| setup | models | notes |
-|---|---|---|
-| SFT + LoRA / full | LoRA: 0.8B, 2B, 4B; full: 0.8B | completion-only CE on cleaned GSM8K solutions ending `The answer is: N` |
-| GRPO / RLOO / GSPO + LoRA / full | LoRA: 0.8B, 2B, 4B; full: 0.8B | 4 prompts x G=4 samples/step, temp 1.0, max 400 new tokens |
+## What is logged
+One W&B run per (model, method, adapter) named `<model>__<method>__<lora|full>`, in project `macbook-posttrain` (GSM8K) and `macbook-posttrain-mathstory`. Failed attempts are in group `discarded` and kept under `runs_discarded/`.
+- **train/ time/ sys/ mem/** every step: loss, lr, grad norm, step time, CPU/GPU/RAM/swap, MLX peak memory; **reward/ completion/ policy/** for RL (reward, format rate, length, truncation, ratio, clip fraction); **eval/** after each epoch (accuracy, truncation, tokens, speed, per-form accuracy on math-story).
+- Local data in `runs/<name>/` and `runs_mathstory/<name>/`: `config.json`, `metrics.jsonl`, every RL rollout (`rollouts.jsonl`), per-epoch evaluation answers (`eval_epochN.jsonl`).
+- Model weights and adapters were deleted after the runs (about 5 GB); re-run `train.py` to regenerate them. Power draw (watts) was not measured.
 
-16 runs total (`scripts/run_queue.sh`). Reward = 1.0 if the final answer is correct + 0.1 format bonus; truncated = 0.
-- **GRPO**: group-normalised advantage, token-level ratio + PPO clip, per-sequence token mean.
-- **RLOO**: leave-one-out baseline (`r_i - mean of other samples`), plain REINFORCE.
-- **GSPO**: group-normalised advantage, *sequence-level* ratio, tight clip (3e-4 / 4e-4).
-- All RL variants are critic-free and reference-free (KL = 0): one model in memory. With `--mu 1` (default, one update per
-  rollout) training is exactly on-policy, so clipping is inactive and variants differ in weighting; use `--mu 2+` to exercise clipping.
-- **Full fine-tuning** trains all transformer blocks (embeddings / lm_head frozen) with an **fp32-master-weight AdamW**:
-  the model stays bf16 but updates accumulate in fp32 (pure bf16 silently drops updates at fine-tuning LRs; see `tests/`).
-- LoRA: rank 16, scale 20, all linear layers, all layers. LR: SFT 1e-4 (LoRA) / 1e-5 (full); RL 2e-5 (LoRA) / 2e-6 (full); cosine, 5% warmup, grad-clip 1.0.
-- 4B (9.3 GB bf16) is tight on 16 GB: micro-batch 1 + gradient checkpointing by default. If it OOMs/swaps, add `--quantize-base 4` (QLoRA-style).
-- Text-only (GSM8K) — the vision tower is not loaded for training.
-
-## What is logged (every step unless noted)
-- **train/**: loss, lr, grad_norm, tokens, tokens_per_s. **time/**: step_s, gen_s, train_s, elapsed_s. **progress/**: samples_seen, tokens. `epoch` (fractional) and `global_step` are in every row (use either as x-axis).
-- **reward/** (RL): mean, std, correct_rate, format_rate, frac_zero_std_groups. **adv/abs_mean**, **completion/**: len_mean, len_max, truncated_frac. **policy/**: ratio_mean, clip_frac, neg_logp_per_tok, active_seqs. **gen/**: tokens_per_s, prompt_tokens_per_s, tokens.
-- **sys/**: CPU %, GPU util %, RAM, swap (avg+max per step), thermal speed limit, process RSS. **mem/**: MLX peak + active GB.
-- **eval/** (epoch 0..5): accuracy, truncated_frac, gen_tokens_mean, time_s, gen/prompt tokens per s, peak mem.
-- **config**: model, method, adapter, all hyper-parameters, trainable params (and %), steps, load time, hardware.
-- **summary**: baseline/final/best accuracy, gain, total train time, peak memory, steps, trainable params.
-- **Kept data** (local in `runs/<name>/` and as a W&B artifact `<name>-data`): the 500 training samples (also a W&B table), `metrics.jsonl`,
-  **every RL rollout** (`rollouts.jsonl`: response, reward, advantage, ...), per-epoch eval responses (`eval_epochN.jsonl`), LoRA adapters per epoch (full: final weights stay local only).
-- Not available: watts (needs `sudo powermetrics`).
+## Layout
+```
+train.py            one run: --model --method --adapter --dataset {gsm8k,mathstory} (+ --epochs --lr --micro-bs --max-new ...)
+pt/                 common (data, prompts, reward, eval), gdn (differentiable gated delta), losses, optim (MasterAdamW)
+scripts/            run_queue.sh (the queue used), smoke_test.sh (tiny end-to-end check), watchdog_check.py
+tests/              unit tests, gated-delta gradient check, memory profiler
+analysis/, report.py  build results/report.html and results/report_mathstory.html (inline SVG, no plotting dependency)
+data/               training sets and the self-distillation data
+runs/, runs_mathstory/, runs_discarded/   per-run metrics, rollouts, evaluation answers
+results/            comparison.csv, memory_profile.json, the two reports
+```
 
 ## Run
 ```
-scripts/smoke_test.sh                       # ~tiny end-to-end check of every path (offline W&B); run first, after inference benchmark finishes
-scripts/run_queue.sh --wait-for-inference   # starts all 16 runs once the inference benchmark has finished (../inference-testing/results/9B-4bit-think8x_summary.csv exists)
-python train.py --model 2B --method gspo --adapter lora     # single run
-python report.py                      # cross-run table + curves -> results/ and W&B run "00_comparison" (also runs at end of the queue)
+source ../inference-testing/.venv/bin/activate && export WANDB_API_KEY=...   # the queue script reads ../inference-testing/.wandb_key
+scripts/smoke_test.sh                              # optional, ~15 min
+python train.py --model 0.8B --method grpo --adapter lora [--dataset mathstory --project macbook-posttrain-mathstory --out runs_mathstory]
+scripts/run_queue.sh                               # the full queue; finished runs are skipped
+python report.py                                   # regenerate both reports from the run folders
 ```
-Uses `../inference-testing/.venv` and the key in `../inference-testing/.wandb_key`. Finished runs are skipped (`runs/<name>/DONE`); a crashed run restarts from scratch (delete its folder first).
-Knobs: `--epochs`, `--n-train`, `--group`, `--max-new`, `--mu`, `--lr`, `--micro-bs`, `--max-steps`.
-
-## Expect it to be slow (unmeasured guesses)
-Each run = 625 optimiser steps. RL steps are dominated by generation (16 samples x up to 400 tokens, batched). Rough guess: 0.8B runs a few hours
-each, 2B ~half a day, 4B about a day -> the whole queue likely takes several days. Use the smoke test timings to extrapolate, then cut with
-`--epochs`/`--max-steps` or run a subset if needed.
+Never run two model jobs at once on 16 GB: the GPU memory limit is shared and the second job crashes the first.

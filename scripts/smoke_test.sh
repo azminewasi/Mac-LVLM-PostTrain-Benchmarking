@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Tiny end-to-end check of every code path on the 0.8B (8 train samples, 1 epoch, offline W&B). ~10-20 min. Run AFTER the inference benchmark.
+# Tiny end-to-end check of every code path on the 0.8B (8 train samples, 1 epoch, offline W&B). ~10-20 min.
 cd "$(dirname "$0")/.." || exit 1; source ../inference-testing/.venv/bin/activate
 python -m tests.test_units || exit 1
 C="--n-train 8 --epochs 1 --n-eval 8 --batch 2 --group 2 --max-new 64 --wandb-mode offline --project smoke --out runs_smoke"
