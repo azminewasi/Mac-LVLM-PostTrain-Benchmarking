@@ -169,6 +169,16 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Why SFT works here but not on GSM8K (hypothesis, untested):** the equation-derived targets are short, always correct and within what a 0.8B model can execute, whereas GSM8K's human solutions skip arithmetic the model cannot reproduce. Caveats: n=100 per form (±10 points), one seed; the SFT targets are an easy deterministic template, so this says little about SFT on natural-language solutions.
 - **Next:** math-story `sftgentle`, `sftself`, then GRPO, RLOO, GSPO (LoRA). The RL methods need to beat ~0.94 to matter. The report generator only reads `runs/` (GSM8K); a math-story report is still to be written once more runs exist.
 
+### 2026-11-18 09:25 · math-story-problems, `sftgentle` (LoRA) finished: 0.565 → 0.978
+- **Setup:** same equation-derived targets as the SFT run but lr 5e-6 and 2 epochs (250 steps, ~9 min).
+| Epoch | Overall | eq | story_1 | story_2 | story_3 | Mean tokens | Truncated |
+|---|---|---|---|---|---|---|---|
+| 0 | 56% | 90% | 74% | 54% | 8% | 302 | 18% |
+| 1 | 97% | 97% | 97% | 97% | 97% | 42 | 0% |
+| 2 | 98% | 96% | 99% | 98% | 98% | 42 | 0% |
+- **Reading:** the gentle recipe beats the original (lr 2e-5, 5 epochs: 0.94) and does so after one epoch (0.97): the bare-equation dip seen with the original SFT (56% at epoch 1) never appears. Plausible reason (hypothesis): the higher lr overshoots/overfits to the story templates. Caveat: 0.978 vs 0.94 over 400 prompts (±~2-3 points at this accuracy level) is borderline significant; one seed.
+- **Contrast with GSM8K:** there the gentle recipe still hurt (0.37) because the human solutions were not something the model could execute; here the targets are clean and executable, so gentler is simply better.
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
