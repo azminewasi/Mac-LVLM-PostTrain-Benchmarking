@@ -179,6 +179,17 @@ Times are local and approximate where marked `~`. Run data referred to here live
 - **Reading:** the gentle recipe beats the original (lr 2e-5, 5 epochs: 0.94) and does so after one epoch (0.97): the bare-equation dip seen with the original SFT (56% at epoch 1) never appears. Plausible reason (hypothesis): the higher lr overshoots/overfits to the story templates. Caveat: 0.978 vs 0.94 over 400 prompts (±~2-3 points at this accuracy level) is borderline significant; one seed.
 - **Contrast with GSM8K:** there the gentle recipe still hurt (0.37) because the human solutions were not something the model could execute; here the targets are clean and executable, so gentler is simply better.
 
+### 2026-11-18 10:11 · math-story-problems, `sftself` (LoRA) finished: 0.565 → 0.635 (best epoch 0.685)
+- **Setup:** fine-tune on the untrained model's own correct finished answers (552 examples from 324/500 questions; 2,000 answers sampled at T=1.0, 66% finished), lr 5e-6, 2 epochs (~275 steps, ~25 min plus ~28 min of sampling).
+| Epoch | Overall | eq | story_1 | story_2 | story_3 | Mean tokens | Truncated |
+|---|---|---|---|---|---|---|---|
+| 0 | 56% | 90% | 74% | 54% | 8% | 302 | 18% |
+| 1 | 68% | 89% | 92% | 83% | 10% | 283 | 10% |
+| 2 | 64% | 83% | 90% | 61% | 20% | 286 | 14% |
+- **Reading:** a modest gain overall (+7 points final, +12 at the best epoch) concentrated in the short story form (74% → 90%); the long distractor story stays poor (8% → 20%, 45% still truncated at the end), and story_2 fell from 83% at epoch 1 to 61% at epoch 2, a swing larger than the ±10 noise. The data covers only questions the model already solves (324/500) and finished answers, so it has little signal on the hard form (story_3). Self-distillation can only reinforce what the model already does; here the equation-derived targets (SFT 0.94, `sftgentle` 0.978) are far better because they teach a new, executable style.
+- **Cross-dataset comparison of the three SFT recipes (final test accuracy; baseline in brackets):** GSM8K: human 0.22, gentle 0.37, self 0.54 [0.54]. Math-story: equation-derived 0.94, gentle 0.978, self 0.635 [0.565]. The best SFT data source depends on whether the reference solutions are something the model can execute.
+- Next: math-story GRPO, RLOO, GSPO (LoRA).
+
 ## Results so far (0.8B, GSM8K: 500 train questions x 5 epochs, first 100 test questions, one seed)
 | Run | Final acc | Best epoch acc | Hours | Peak MLX GB |
 |---|---|---|---|---|
