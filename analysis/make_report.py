@@ -313,7 +313,6 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 <li><b>Data:</b> 500 GSM8K train questions (seeded subset saved with each run); evaluation on the first 100 test questions, greedy, thinking off, 512-token cap.</li>
 <li><b>Hyperparameters:</b> LoRA rank 16, scale 20, no dropout; gradient clipping 1.0; gradient checkpointing on for all runs except the first SFT run (0.8B LoRA), which finished before checkpointing was enabled for the 0.8B (it only changes memory and speed, not the maths); seed fixed.</li>
 <li><b>Everything is kept:</b> per-run metrics, rollouts and evaluation generations under <code>runs/</code> (model weights were deleted locally after the runs; re-run <code>train.py</code> to regenerate them), the discarded attempts under <code>runs_discarded/</code>; W&amp;B project <code>macbook-posttrain</code> has one line per (model, method, adapter).</li>
-<li>Regenerate this page with <code>python analysis/make_report.py</code>.</li>
 </ul>
 </main></body></html>"""
 os.makedirs(OUT, exist_ok=True)
