@@ -25,3 +25,5 @@ logs/
 
 # vision experiment: downloaded parquet shards and resized images (regenerable from the Hub)
 data/spatial_images/
+data/maze_images/
+data/*spatial*.jsonl

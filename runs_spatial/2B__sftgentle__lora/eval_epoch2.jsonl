@@ -1,0 +1,100 @@
+{"id": "spatialmap.vqa.2036.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Southwest"}
+{"id": "spatialmap.vqa.2492.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northeast"}
+{"id": "spatialmap.vqa.2427.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Northwest"}
+{"id": "spatialmap.vqa.2144.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Southeast"}
+{"id": "spatialmap.vqa.2003.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: D. Unicorn Umbrellas"}
+{"id": "spatialmap.vqa.2417.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2384.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: B. The Rose Tea House"}
+{"id": "spatialmap.vqa.2321.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2345.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2051.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2189.1", "qtype": "which_object", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: A. Olive's Oils"}
+{"id": "spatialmap.vqa.2215.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. Swamp Supplies"}
+{"id": "spatialmap.vqa.2155.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northwest"}
+{"id": "spatialmap.vqa.2013.2", "qtype": "count", "gold": "D", "pred": "B", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 1"}
+{"id": "spatialmap.vqa.2361.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Southwest"}
+{"id": "spatialmap.vqa.2190.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2079.2", "qtype": "count", "gold": "B", "pred": "C", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 1"}
+{"id": "spatialmap.vqa.2126.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: C. Molly's Music Store"}
+{"id": "spatialmap.vqa.2477.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Northwest"}
+{"id": "spatialmap.vqa.2395.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Southwest"}
+{"id": "spatialmap.vqa.2469.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Southwest"}
+{"id": "spatialmap.vqa.2048.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Southwest"}
+{"id": "spatialmap.vqa.2103.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Northeast"}
+{"id": "spatialmap.vqa.2389.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2296.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: B. Monumental Memories"}
+{"id": "spatialmap.vqa.2032.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2020.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Northeast"}
+{"id": "spatialmap.vqa.2452.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2188.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2132.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Candlemaker's Cove"}
+{"id": "spatialmap.vqa.2054.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2145.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 11, "response": "The answer is: C. Tapas Temptations"}
+{"id": "spatialmap.vqa.2301.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2107.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Northeast"}
+{"id": "spatialmap.vqa.2216.1", "qtype": "which_object", "gold": "B", "pred": "A", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: A. Wildlife Wonders"}
+{"id": "spatialmap.vqa.2419.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2377.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2354.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Southwest"}
+{"id": "spatialmap.vqa.2199.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Southeast"}
+{"id": "spatialmap.vqa.2183.2", "qtype": "count", "gold": "A", "pred": "D", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 2"}
+{"id": "spatialmap.vqa.2302.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: C. Radio Waves Station"}
+{"id": "spatialmap.vqa.2316.2", "qtype": "count", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 0"}
+{"id": "spatialmap.vqa.2402.2", "qtype": "count", "gold": "A", "pred": "C", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 2"}
+{"id": "spatialmap.vqa.2002.1", "qtype": "which_object", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. Art Supplies"}
+{"id": "spatialmap.vqa.2113.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Northeast"}
+{"id": "spatialmap.vqa.2402.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 12, "response": "The answer is: C. Ostrich's Oils"}
+{"id": "spatialmap.vqa.2061.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northeast"}
+{"id": "spatialmap.vqa.2124.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: B. Silo Surprises"}
+{"id": "spatialmap.vqa.2320.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2030.2", "qtype": "count", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 0"}
+{"id": "spatialmap.vqa.2129.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Lumber's Marketplace"}
+{"id": "spatialmap.vqa.2380.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2345.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Northeast"}
+{"id": "spatialmap.vqa.2445.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2360.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2198.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Central Park Pet Store"}
+{"id": "spatialmap.vqa.2230.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: B. Peterson's Pizzeria"}
+{"id": "spatialmap.vqa.2136.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: D. Walrus Watches"}
+{"id": "spatialmap.vqa.2063.2", "qtype": "count", "gold": "A", "pred": "C", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 1"}
+{"id": "spatialmap.vqa.2307.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: B. Rose Garden Florist"}
+{"id": "spatialmap.vqa.2369.1", "qtype": "which_object", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 11, "response": "The answer is: A. Dingo's Drones"}
+{"id": "spatialmap.vqa.2007.2", "qtype": "count", "gold": "D", "pred": "C", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2433.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: C. Andy's Autos"}
+{"id": "spatialmap.vqa.2396.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Southeast"}
+{"id": "spatialmap.vqa.2318.1", "qtype": "which_object", "gold": "D", "pred": "B", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: B. Raven's Rations"}
+{"id": "spatialmap.vqa.2477.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2263.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Charlie's Chocolate Factory"}
+{"id": "spatialmap.vqa.2319.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 1"}
+{"id": "spatialmap.vqa.2197.1", "qtype": "which_object", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 11, "response": "The answer is: B. Sea Breeze Seafood"}
+{"id": "spatialmap.vqa.2273.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2124.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Northeast"}
+{"id": "spatialmap.vqa.2189.2", "qtype": "count", "gold": "C", "pred": "A", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 0"}
+{"id": "spatialmap.vqa.2381.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Ice Queen Ice Cream"}
+{"id": "spatialmap.vqa.2304.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: D. Pegasus Pet Supplies"}
+{"id": "spatialmap.vqa.2193.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Southeast"}
+{"id": "spatialmap.vqa.2039.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Southeast"}
+{"id": "spatialmap.vqa.2300.1", "qtype": "which_object", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: A. Delilah's Deli"}
+{"id": "spatialmap.vqa.2401.0", "qtype": "direction", "gold": "C", "pred": "A", "correct": 0, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northeast"}
+{"id": "spatialmap.vqa.2455.0", "qtype": "direction", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: D. Northeast"}
+{"id": "spatialmap.vqa.2380.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Southwest"}
+{"id": "spatialmap.vqa.2083.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2195.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northwest"}
+{"id": "spatialmap.vqa.2466.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Northwest"}
+{"id": "spatialmap.vqa.2412.2", "qtype": "count", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 0"}
+{"id": "spatialmap.vqa.2158.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 2"}
+{"id": "spatialmap.vqa.2448.1", "qtype": "which_object", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: D. Power Plant Parts"}
+{"id": "spatialmap.vqa.2130.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2045.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Northeast"}
+{"id": "spatialmap.vqa.2040.0", "qtype": "direction", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: A. Southeast"}
+{"id": "spatialmap.vqa.2369.2", "qtype": "count", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 0"}
+{"id": "spatialmap.vqa.2261.0", "qtype": "direction", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: B. Southeast"}
+{"id": "spatialmap.vqa.2293.2", "qtype": "count", "gold": "B", "pred": "B", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: B. 0"}
+{"id": "spatialmap.vqa.2309.2", "qtype": "count", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: C. 0"}
+{"id": "spatialmap.vqa.2170.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
+{"id": "spatialmap.vqa.2082.1", "qtype": "which_object", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 9, "response": "The answer is: A. Wildlife Wonders"}
+{"id": "spatialmap.vqa.2085.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: C. Arcade Amusements"}
+{"id": "spatialmap.vqa.2396.1", "qtype": "which_object", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 10, "response": "The answer is: C. Picnic Pantry"}
+{"id": "spatialmap.vqa.2221.0", "qtype": "direction", "gold": "C", "pred": "C", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 7, "response": "The answer is: C. Southeast"}
+{"id": "spatialmap.vqa.2100.2", "qtype": "count", "gold": "A", "pred": "A", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: A. 1"}
+{"id": "spatialmap.vqa.2247.2", "qtype": "count", "gold": "D", "pred": "D", "correct": 1, "fmt": 1, "truncated": 0, "gen_tokens": 8, "response": "The answer is: D. 0"}
