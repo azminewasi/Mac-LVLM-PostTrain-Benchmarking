@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from svgkit import lines, bars, tbl, fig, CSS, esc
 
 RUNS, OUT = "runs_spatial", "results"
+MODEL = sys.argv[1] if len(sys.argv) > 1 else "0.8B"; SUF = "" if MODEL == "0.8B" else "_" + MODEL
 METHODS = ["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"]
 NAMES = {"sft": "SFT", "sftgentle": "SFT gentle", "sftself": "SFT self-distilled", "grpo": "GRPO", "rloo": "RLOO", "gspo": "GSPO"}
 MCOL = {"sft": "s4", "sftgentle": "s5", "sftself": "s6", "grpo": "s0", "rloo": "s1", "gspo": "s2"}
@@ -17,7 +18,7 @@ smooth = lambda v, w=25: [float(np.mean(v[max(0, i - w + 1): i + 1])) for i in r
 
 R = {}
 for m in METHODS:
-    d = f"{RUNS}/0.8B__{m}__lora"; met = read(f"{d}/metrics.jsonl")
+    d = f"{RUNS}/{MODEL}__{m}__lora"; met = read(f"{d}/metrics.jsonl")
     if not met: continue
     ep = {}
     for f in sorted(glob.glob(f"{d}/eval_epoch*.jsonl")):
@@ -42,7 +43,7 @@ for m in order:
         s["s_per_correct"] = s["time_s"] / (s["acc"] * s["n"]) if s["time_s"] and s["acc"] else None
         T[(m, e)] = s; rows_csv.append(dict(run=m, epoch=e, **s))
 os.makedirs(OUT, exist_ok=True)
-with open(f"{OUT}/vision_analytics.csv", "w", newline="") as f:
+with open(f"{OUT}/vision_analytics{SUF}.csv", "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=list(rows_csv[0])); w.writeheader(); w.writerows(rows_csv)
 
 def series(key, scale=1.0):
@@ -51,7 +52,7 @@ c_tok = lines(series("mean"), "epoch", "mean generated tokens per answer", fmt="
 c_corr = lines(series("per_correct"), "epoch", "generated tokens per correct answer", fmt="{:.0f}")
 c_acc = lines(series("acc"), "epoch", "test accuracy", ymax=1.0, fmt="{:.0%}")
 c_dec = lines(series("dec_tps"), "epoch", "batched decode tokens/s (25 answers at once)", fmt="{:.0f}")
-c_pre = lines(series("pre_tps"), "epoch", "prefill tokens/s (prompt incl. ~300 image tokens)", fmt="{:.0f}")
+c_pre = lines(series("pre_tps"), "epoch", "prefill tokens/s (prompt incl. 196 image tokens)", fmt="{:.0f}")
 c_spc = lines(series("s_per_correct"), "epoch", "evaluation seconds per correct answer", fmt="{:.2f}")
 
 RL = [m for m in ("grpo", "rloo", "gspo") if m in R]
@@ -91,12 +92,12 @@ if best:
 
 # ---- optional single-stream token timing (tests/vision_infer_speed.py)
 SS = ""
-sp = f"{OUT}/vision_infer_speed.json"
-if os.path.exists(sp):
+sp = f"{OUT}/vision_infer_speed.json" if MODEL == "0.8B" else ""
+if sp and os.path.exists(sp):
     d = json.load(open(sp)); runs = d["runs"]
     names = [r["label"] for r in runs]
     SS = "<h2 id='single'>Single-stream token timing</h2><p>One question at a time, greedy, the same 100 test questions, measured per token on the MacBook (no batching).</p>"
-    SS += fig("Time to first token (prefill of ~300 image + text tokens) and total time per answer, mean over the test set.", bars(names, [("time to first token (s)", "s0", [r["ttft_mean"] for r in runs]), ("total time per answer (s)", "s1", [r["total_mean"] for r in runs])], fmt="{:.2f}", ylabel="seconds"))
+    SS += fig("Time to first token (prefill of the ~300-token prompt: 196 image tokens + text) and total time per answer, mean over the test set.", bars(names, [("time to first token (s)", "s0", [r["ttft_mean"] for r in runs]), ("total time per answer (s)", "s1", [r["total_mean"] for r in runs])], fmt="{:.2f}", ylabel="seconds"))
     SS += fig("Decode speed (tokens/s) and prefill speed (tokens/s ÷ 10), mean over the test set.", bars(names, [("decode tokens/s", "s0", [r["decode_tps_mean"] for r in runs]), ("prefill tokens/s ÷ 10", "s3", [r["prefill_tps_mean"] / 10 for r in runs])], fmt="{:.0f}", ylabel="tokens / s"))
     bins = d["bins"]
     ser = [(r["label"], MCOL.get(r.get("method"), "s4"), False, [(b, v) for b, v in zip(bins, r["itl_by_pos_ms"]) if v is not None]) for r in runs if r.get("itl_by_pos_ms")]
@@ -107,7 +108,7 @@ if os.path.exists(sp):
 html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual-QA post-training: token and speed analytics</title><style>{CSS}{ADD_CSS}</style></head><body><main>
 <p class="kicker">Mac LLM/VLM Post-training Testing · visual QA (SpatialEval spatial-map)</p>
 <h1>Token-level and speed analytics: what post-training does to inference cost</h1>
-<p class="sub">{datetime.date.today().strftime('%B %d, %Y')} · Qwen3.5-0.8B with LoRA · Apple M5 MacBook Pro, 16 GB · {len(order)} runs{' (still running)' if any(not R[m]['done'] for m in order) else ''}</p>
+<p class="sub">{datetime.date.today().strftime('%B %d, %Y')} · Qwen3.5-{MODEL} with LoRA · Apple M5 MacBook Pro, 16 GB · {len(order)} runs{' (still running)' if any(not R[m]['done'] for m in order) else ''}</p>
 <p class="lede">Training changes what the model writes, and what it writes decides what inference costs. This page measures it per token: how long the answers are, how many tokens each correct answer costs, and how fast the MacBook produces them.</p>
 {f'<div class="take"><b>Headline.</b> {take}</div>' if take else ''}
 <h2>1. Answer length and cost per correct answer</h2>
@@ -127,5 +128,5 @@ html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name
 {SS}
 <p class="dim">Per-sample generated-token counts come from the saved evaluation answers; throughput numbers come from the per-epoch evaluation and per-step logs. Regenerate with python analysis/vision_analytics.py.</p>
 </main></body></html>"""
-open(f"{OUT}/vision_analytics.html", "w").write(html)
+open(f"{OUT}/vision_analytics{SUF}.html", "w").write(html)
 print(f"wrote {OUT}/vision_analytics.html and .csv | runs: " + ", ".join(f"{m}:{'done' if R[m]['done'] else 'running'}" for m in order))

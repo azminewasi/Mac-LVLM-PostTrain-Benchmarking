@@ -5,7 +5,7 @@ using **SFT** and three critic-free RL methods (**GRPO, RLOO, GSPO**), with **Lo
 (GSM8K and a short-answer math-story dataset), and measures what each setup costs and gains (accuracy, speed, memory, system load, answer style).
 Companion of [MacBook-Pro-LLM-VLM-Inference-Benchmarking](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) (same prompt and eval set, so base-model numbers carry over).
 
-**Links:** [GitHub repo](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking) · blog posts: [GSM8K](https://azminewasi.github.io/blog/mac-post-training-gsm8k.html), [math-story](https://azminewasi.github.io/blog/mac-post-training-math-story.html) · companion: [inference repo](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) and [blog post](https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html) · reports: [`results/report.html`](results/report.html), [`results/report_mathstory.html`](results/report_mathstory.html) · research log: [`JOURNAL.md`](JOURNAL.md)
+**Links:** [GitHub repo](https://github.com/azminewasi/Mac-LVLM-PostTrain-Benchmarking) · blog posts: [GSM8K](https://azminewasi.github.io/blog/mac-post-training-gsm8k.html), [math-story](https://azminewasi.github.io/blog/mac-post-training-math-story.html), [vision (spatial maps)](https://azminewasi.github.io/blog/mac-post-training-vision.html) · companion: [inference repo](https://github.com/azminewasi/MacBook-Pro-LLM-VLM-Inference-Benchmarking) and [blog post](https://azminewasi.github.io/blog/mac-llm-inference-benchmark.html) · reports: [`results/report.html`](results/report.html), [`results/report_mathstory.html`](results/report_mathstory.html), [`results/report_vision.html`](results/report_vision.html) (token/speed pages: [0.8B](results/vision_analytics.html), [2B](results/vision_analytics_2B.html)) · research log: [`JOURNAL.md`](JOURNAL.md)
 
 ## Results (0.8B, final-epoch test accuracy, one seed)
 | | untrained | SFT | SFT gentle | SFT self-distilled | GRPO | RLOO | GSPO |
@@ -20,13 +20,26 @@ With 100 (GSM8K) or 400 (math-story) test prompts and one seed, small difference
 - Memory is the first wall: a LoRA step peaked at 15.8 GB until gradient checkpointing (6.9 GB); full fine-tuning peaked at ~11 GB. RL runs took ~3 h each on GSM8K, 1-2 h on math-story.
 - Not run: 2B/4B, SFT-full on GSM8K, full fine-tuning on math-story.
 
+## Visual QA post-training (Qwen3.5-0.8B and 2B, SpatialEval spatial-map)
+Same recipes on a picture-and-question task: 500 train / 100 test items (direction, which-object, count questions about a map), LoRA on the language model, vision tower frozen with cached features, 640-token cap, strict "The answer is: X" scoring. Final test accuracy, one seed (about ±10 points of noise):
+
+| | untrained | SFT | SFT gentle | SFT self-distilled | GRPO | RLOO | GSPO |
+|---|---|---|---|---|---|---|---|
+| 0.8B | 0.39 | 0.89 | 0.91 | 0.63 | 0.84 | 0.88 | 0.87 |
+| 2B | 0.49 | 0.90 | 0.90 | – | 0.85 | – | – |
+
+- Most of the failure is format and length (29% of untrained answers hit the token cap); training cuts tokens per correct answer from about 1,000 to 9 (SFT) or 44 (GSPO), which is also what cuts latency per answer (5.6 s to 0.25 s single-stream), since decode speed stays at 64-72 tokens/s and the image prefill is a fixed 0.13 s.
+- The 2B model fits for GRPO on 16 GB (peak 7.7 GB MLX memory, up to 6.5 GB swap, micro-batch 1) but is not better than 0.8B here.
+- Out-of-distribution maze-navigation test (`tests/vision_ood.py`): trained 0.8B adapters score 55-67% (chance 25%); the self-distilled adapter collapses to 9%. No blank-image control was run.
+- Run with `train_vision.py --model {0.8B,2B} --method ...` (queue: `scripts/run_queue_vision.sh`, follow-ups: `scripts/after_queue_vision.sh`). Data downloads and image caches go to `data/` (ignored); metrics and answers are in `runs_spatial/`.
+
 ## Setup
 - **Data:** GSM8K (500 random train questions, seed 0, saved in `data/`; the first 100 test questions, same prompt and scoring as the inference repo: greedy, thinking off, 512-token cap) and [`azminetoushikwasi/math-story-problems`](https://huggingface.co/datasets/azminetoushikwasi/math-story-problems) (500 train items in mixed story forms; test = 100 items in all four forms, 400 prompts). 5 epochs (2 for the gentle SFT variants).
 - **Methods:** `sft` (reference solutions, lr 2e-5 LoRA / 1e-5 full); `sftgentle` (lr 5e-6, 2 epochs); `sftself` (rejection-sampled, the model's own correct answers); `grpo`, `rloo`, `gspo` (4 prompts x 4 rollouts per step, temperature 1.0, up to 640 new tokens, lr 2e-6 LoRA / 1e-6 full, no KL, no critic).
 - **Reward (RL):** 1 if the answer finished and is correct, else 0. Format is logged, not rewarded (a format bonus plus truncation was reward-hacked in the first attempt, see the journal).
 - **LoRA:** rank 16, scale 20, all linear layers. **Full fine-tuning:** all transformer blocks (embeddings frozen) with an fp32-master-weight AdamW (~14 bytes/param). Gradient checkpointing on.
 - **Qwen3.5's gated-delta layers have no backward kernel in MLX**, so `pt/gdn.py` implements a chunk-parallel differentiable version (checked against the library reference in `tests/test_gdn.py`).
-- Text-only: the vision tower is not loaded.
+- Text runs are text-only (vision tower not loaded); the visual runs use `train_vision.py` and `pt/vision.py`.
 
 ## What is logged
 One W&B run per (model, method, adapter) named `<model>__<method>__<lora|full>`, in project `macbook-posttrain` (GSM8K) and `macbook-posttrain-mathstory`. Failed attempts are in group `discarded` and kept under `runs_discarded/`.
@@ -40,9 +53,9 @@ train.py            one run: --model --method --adapter --dataset {gsm8k,mathsto
 pt/                 common (data, prompts, reward, eval), gdn (differentiable gated delta), losses, optim (MasterAdamW)
 scripts/            run_queue.sh (the queue used), smoke_test.sh (tiny end-to-end check), watchdog_check.py
 tests/              unit tests, gated-delta gradient check, memory profiler
-analysis/, report.py  build results/report.html and results/report_mathstory.html (inline SVG, no plotting dependency)
+analysis/, report.py  build results/report.html, report_mathstory.html, report_vision.html and the vision analytics pages (inline SVG, no plotting dependency)
 data/               training sets and the self-distillation data
-runs/, runs_mathstory/, runs_discarded/   per-run metrics, rollouts, evaluation answers
+runs/, runs_mathstory/, runs_spatial/, runs_discarded/   per-run metrics, rollouts, evaluation answers
 results/            comparison.csv, memory_profile.json, the two reports
 ```
 

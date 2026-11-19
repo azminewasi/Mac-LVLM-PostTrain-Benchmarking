@@ -1,0 +1,76 @@
+{
+ "task": "SpatialEval mazenav (out-of-distribution)",
+ "n": 100,
+ "chance": 0.25,
+ "gold_letters": {
+  "B": 26,
+  "A": 17,
+  "C": 32,
+  "D": 25
+ },
+ "majority_baseline": 0.32,
+ "runs": [
+  {
+   "label": "Untrained",
+   "method": null,
+   "acc": 0.07,
+   "trunc": 0.89,
+   "fmt": 0.11,
+   "gen_tokens": 607.65,
+   "pred_letters": {
+    "null": 89,
+    "D": 5,
+    "A": 2,
+    "B": 2,
+    "C": 2
+   },
+   "tok_s": 406.3919280170945
+  },
+  {
+   "label": "SFT",
+   "method": "sft",
+   "acc": 0.45,
+   "trunc": 0.0,
+   "fmt": 1.0,
+   "gen_tokens": 8.0,
+   "pred_letters": {
+    "B": 4,
+    "C": 27,
+    "D": 20,
+    "A": 49
+   },
+   "tok_s": 418.56167501075385
+  },
+  {
+   "label": "SFT gentle",
+   "method": "sftgentle",
+   "acc": 0.7,
+   "trunc": 0.0,
+   "fmt": 1.0,
+   "gen_tokens": 8.0,
+   "pred_letters": {
+    "B": 22,
+    "C": 38,
+    "D": 28,
+    "A": 12
+   },
+   "tok_s": 417.54123945603544
+  },
+  {
+   "label": "GRPO",
+   "method": "grpo",
+   "acc": 0.44,
+   "trunc": 0.29,
+   "fmt": 0.74,
+   "gen_tokens": 289.02,
+   "pred_letters": {
+    "C": 18,
+    "null": 26,
+    "B": 19,
+    "D": 19,
+    "A": 18
+   },
+   "tok_s": 245.83754908108725
+  }
+ ]
+}
