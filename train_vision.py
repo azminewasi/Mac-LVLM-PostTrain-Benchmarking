@@ -19,11 +19,11 @@ from pt.losses import group_advantages, sft_loss, rl_loss, token_logprobs
 import pt.vision as V
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--method", required=True, choices=["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"])
+ap.add_argument("--model", default="0.8B", choices=list(V.MODELS)); ap.add_argument("--method", required=True, choices=["sft", "sftgentle", "sftself", "grpo", "rloo", "gspo"])
 ap.add_argument("--n-train", type=int, default=500); ap.add_argument("--n-eval", type=int, default=100); ap.add_argument("--epochs", type=int, default=None)
 ap.add_argument("--seed", type=int, default=0); ap.add_argument("--project", default="macbook-posttrain-spatial"); ap.add_argument("--entity", default=None)
 ap.add_argument("--wandb-mode", default="online"); ap.add_argument("--out", default="runs_spatial")
-ap.add_argument("--lr", type=float, default=None); ap.add_argument("--batch", type=int, default=4); ap.add_argument("--micro-bs", type=int, default=2)
+ap.add_argument("--lr", type=float, default=None); ap.add_argument("--batch", type=int, default=4); ap.add_argument("--micro-bs", type=int, default=None, help="default 2 (0.8B) / 1 (2B)")
 ap.add_argument("--max-seq", type=int, default=1100); ap.add_argument("--clip-norm", type=float, default=1.0)
 ap.add_argument("--lora-rank", type=int, default=16); ap.add_argument("--lora-scale", type=float, default=20.0)
 ap.add_argument("--group", type=int, default=4); ap.add_argument("--max-new", type=int, default=640); ap.add_argument("--temp", type=float, default=1.0)
@@ -32,15 +32,16 @@ ap.add_argument("--no-grad-ckpt", action="store_true"); ap.add_argument("--max-s
 args = ap.parse_args()
 
 RL = args.method in ("grpo", "rloo", "gspo")
+args.micro_bs = args.micro_bs or (2 if args.model == "0.8B" else 1)
 if args.epochs is None: args.epochs = 2 if args.method in ("sftgentle", "sftself") else 5
 if args.lr is None: args.lr = (2e-5 if args.method == "sft" else 5e-6) if not RL else 2e-6
 tight = {"gspo": (3e-4, 4e-4)}.get(args.method, (0.2, 0.2)); args.eps_lo = args.eps_lo or tight[0]; args.eps_hi = args.eps_hi or tight[1]
-run_name = f"0.8B__{args.method}__lora"; out = f"{args.out}/{run_name}"; os.makedirs(out, exist_ok=True)
+run_name = f"{args.model}__{args.method}__lora"; out = f"{args.out}/{run_name}"; os.makedirs(out, exist_ok=True)
 if os.path.exists(f"{out}/DONE"): print(f"{run_name} already done, skipping"); raise SystemExit(0)
 mx.random.seed(args.seed); np.random.seed(args.seed)
 
 # ---------------------------------------------------------------- model + data
-t0 = time.time(); model, processor = load(V.MODEL_ID); cfg = load_config(V.MODEL_ID); load_s = time.time() - t0
+t0 = time.time(); model, processor = load(V.MODELS[args.model]); cfg = load_config(V.MODELS[args.model]); load_s = time.time() - t0
 tok = processor.tokenizer if hasattr(processor, "tokenizer") else processor
 V.apply_lora(model, args.lora_rank, args.lora_scale)
 layers = model.language_model.model.layers; _layer_cls = type(layers[0]); _orig_call = _layer_cls.__call__
@@ -54,18 +55,19 @@ prep = V.prep_rows(model, processor, cfg, train + evalset)
 ctx = {}; L.EXTRA["fn"] = V.make_fwd(model, ctx)
 END = end_token_id(tok)
 print(f"{run_name}: loaded {load_s:.1f}s, trainable {n_train_params/1e6:.1f}M / {n_total_params/1e6:.1f}M, {len(train)} train / {len(evalset)} eval, prompt {len(prep[train[0]['id']]['ids'])} tokens", flush=True)
+SELF = f"data/self_spatial_n{args.n_train}_seed{args.seed}_k4" + ("" if args.model == "0.8B" else f"_{args.model}") + ".jsonl"
 if args.method == "sftself":
-    train = V.build_self_data(model, processor, cfg, train, prep, f"data/self_spatial_n{args.n_train}_seed{args.seed}_k4.jsonl", k=4, per_q=2, max_new=args.max_new, temp=1.0)
+    train = V.build_self_data(model, processor, cfg, train, prep, SELF, k=4, per_q=2, max_new=args.max_new, temp=1.0)
 steps_per_epoch = math.ceil(len(train) / args.batch); total_steps = steps_per_epoch * args.epochs * (args.mu if RL else 1)
 if args.max_steps: total_steps = min(total_steps, args.max_steps)
 
 # ---------------------------------------------------------------- wandb
 import wandb
-cfg_log = dict(vars(args)) | dict(run_name=run_name, model_name=V.MODEL_ID, dataset="spatialeval-spatialmap", image_size=V.SIZE, trainable_params=n_train_params, total_params=n_total_params,
+cfg_log = dict(vars(args)) | dict(run_name=run_name, model_name=V.MODELS[args.model], dataset="spatialeval-spatialmap", image_size=V.SIZE, trainable_params=n_train_params, total_params=n_total_params,
               trainable_pct=100 * n_train_params / n_total_params, steps_per_epoch=steps_per_epoch, total_steps=total_steps, load_time_s=load_s, chip="Apple M5", ram_gb=16,
               mlx=mx.__version__, os=platform.platform(), algorithm_notes="vision tower frozen (features cached); LoRA on the language model; " + ("critic-free, reference-free (KL=0)" if RL else "completion-only cross-entropy"),
               reward="1.0 if finished and the final 'The answer is: X' is the gold option, else 0 (format is logged, not rewarded)" if RL else None)
-run = wandb.init(project=args.project, entity=args.entity, name=run_name, group=args.method, job_type="lora", tags=["0.8B", args.method, "lora", "spatial", "vision"], config=cfg_log, mode=args.wandb_mode, dir=out)
+run = wandb.init(project=args.project, entity=args.entity, name=run_name, group=args.method, job_type="lora", tags=[args.model, args.method, "lora", "spatial", "vision"], config=cfg_log, mode=args.wandb_mode, dir=out)
 json.dump(cfg_log, open(f"{out}/config.json", "w"), indent=1, default=str)
 mlog = open(f"{out}/metrics.jsonl", "a"); rlog = open(f"{out}/rollouts.jsonl", "a") if RL else None
 mon = Monitor(); mon.start(); state = dict(step=0, epoch=0.0, tokens=0, samples=0, t_start=time.time())
@@ -170,6 +172,6 @@ art = wandb.Artifact(f"{run_name}-data", type="run-data")
 for fn in os.listdir(out):
     if fn.endswith((".jsonl", ".json")): art.add_file(f"{out}/{fn}")
 for fn in (f"data/train_spatial_n{args.n_train}_seed{args.seed}.jsonl", f"data/eval_spatial_n{args.n_eval}_seed{args.seed}.jsonl"): art.add_file(fn)
-if args.method == "sftself": art.add_file(f"data/self_spatial_n{args.n_train}_seed{args.seed}_k4.jsonl")
+if args.method == "sftself": art.add_file(SELF)
 run.log_artifact(art); mon.stop(); run.finish(); open(f"{out}/DONE", "w").write(time.strftime("%F %T"))
 print(f"{run_name} DONE: acc {hist[0]:.3f} -> {hist[-1]:.3f} (best {best_acc:.3f})")

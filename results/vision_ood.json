@@ -1,0 +1,122 @@
+{
+ "task": "SpatialEval mazenav (out-of-distribution)",
+ "n": 100,
+ "chance": 0.25,
+ "gold_letters": {
+  "B": 26,
+  "A": 17,
+  "C": 32,
+  "D": 25
+ },
+ "majority_baseline": 0.32,
+ "runs": [
+  {
+   "label": "Untrained",
+   "method": null,
+   "acc": 0.0,
+   "trunc": 0.97,
+   "fmt": 0.03,
+   "gen_tokens": 636.04,
+   "pred_letters": {
+    "null": 97,
+    "B": 1,
+    "A": 1,
+    "C": 1
+   },
+   "tok_s": 767.7707269600685
+  },
+  {
+   "label": "SFT",
+   "method": "sft",
+   "acc": 0.55,
+   "trunc": 0.0,
+   "fmt": 1.0,
+   "gen_tokens": 8.0,
+   "pred_letters": {
+    "B": 45,
+    "C": 35,
+    "A": 5,
+    "D": 15
+   },
+   "tok_s": 761.87340015974
+  },
+  {
+   "label": "SFT gentle",
+   "method": "sftgentle",
+   "acc": 0.65,
+   "trunc": 0.0,
+   "fmt": 1.0,
+   "gen_tokens": 8.0,
+   "pred_letters": {
+    "B": 26,
+    "C": 30,
+    "D": 24,
+    "A": 20
+   },
+   "tok_s": 763.5022445266287
+  },
+  {
+   "label": "SFT self-distilled",
+   "method": "sftself",
+   "acc": 0.09,
+   "trunc": 0.8,
+   "fmt": 0.2,
+   "gen_tokens": 590.44,
+   "pred_letters": {
+    "null": 80,
+    "B": 8,
+    "D": 4,
+    "A": 6,
+    "C": 2
+   },
+   "tok_s": 734.8072567311928
+  },
+  {
+   "label": "GRPO",
+   "method": "grpo",
+   "acc": 0.6,
+   "trunc": 0.04,
+   "fmt": 0.96,
+   "gen_tokens": 273.69,
+   "pred_letters": {
+    "B": 29,
+    "C": 28,
+    "null": 4,
+    "D": 18,
+    "A": 21
+   },
+   "tok_s": 487.0837631295083
+  },
+  {
+   "label": "RLOO",
+   "method": "rloo",
+   "acc": 0.67,
+   "trunc": 0.0,
+   "fmt": 1.0,
+   "gen_tokens": 97.53,
+   "pred_letters": {
+    "B": 23,
+    "A": 27,
+    "C": 25,
+    "D": 25
+   },
+   "tok_s": 459.34727829436525
+  },
+  {
+   "label": "GSPO",
+   "method": "gspo",
+   "acc": 0.66,
+   "trunc": 0.06,
+   "fmt": 0.97,
+   "gen_tokens": 119.17,
+   "pred_letters": {
+    "B": 24,
+    "A": 22,
+    "C": 28,
+    "D": 23,
+    "null": 3
+   },
+   "tok_s": 282.9418446688183
+  }
+ ]
+}

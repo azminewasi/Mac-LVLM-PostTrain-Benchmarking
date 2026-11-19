@@ -9,6 +9,7 @@ import mlx.core as mx, mlx.nn as nn
 from mlx.utils import tree_unflatten
 
 MODEL_ID = "Qwen/Qwen3.5-0.8B"
+MODELS = {"0.8B": "Qwen/Qwen3.5-0.8B", "2B": "Qwen/Qwen3.5-2B"}
 SIZE = 448
 INSTR = "\nThink step by step, then end with a final line: 'The answer is: <letter>'"
 _FIN = re.compile(r"answer is:?\s*\**\(?([A-D])\b", re.I)
